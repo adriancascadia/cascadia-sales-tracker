@@ -1,0 +1,9 @@
+{
+  "query": "\n-- Insert playbook categories\nINSERT INTO playbook_categories (companyId, name, description, icon, displayOrder, createdAt, updatedAt) VALUES\n(1, 'Premium Beverages', 'Unique non-alcoholic beverages with compelling stories', '🥤', 0, NOW(), NOW()),\n(1, 'Specialty Waters', 'Premium bottled waters from around the world', '💧', 1, NOW(), NOW()),\n(1, 'Healthy Snacks', 'Gourmet snacks with health benefits', '🍿', 2, NOW(), NOW()),\n(1, 'Objection Handling', 'Proven strategies for common sales objections', '🎯', 3, NOW(), NOW()),\n(1, 'Cafe Selling Tactics', 'Specific strategies for upscale cafes', '☕', 4, NOW(), NOW()),\n(1, 'New Product Launch', 'How to introduce new items and flavors', '🚀', 5, NOW(), NOW());\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user ywLkx34GkjgGU9z.05df79d78c20 --database nQWhqjSCziMZbyGn64i9Ko --execute \n-- Insert playbook categories\nINSERT INTO playbook_categories (companyId, name, description, icon, displayOrder, createdAt, updatedAt) VALUES\n(1, 'Premium Beverages', 'Unique non-alcoholic beverages with compelling stories', '🥤', 0, NOW(), NOW()),\n(1, 'Specialty Waters', 'Premium bottled waters from around the world', '💧', 1, NOW(), NOW()),\n(1, 'Healthy Snacks', 'Gourmet snacks with health benefits', '🍿', 2, NOW(), NOW()),\n(1, 'Objection Handling', 'Proven strategies for common sales objections', '🎯', 3, NOW(), NOW()),\n(1, 'Cafe Selling Tactics', 'Specific strategies for upscale cafes', '☕', 4, NOW(), NOW()),\n(1, 'New Product Launch', 'How to introduce new items and flavors', '🚀', 5, NOW(), NOW());\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1235
+}
