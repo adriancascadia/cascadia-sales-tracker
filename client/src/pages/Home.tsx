@@ -12,7 +12,7 @@ export default function Home() {
     enabled: isAuthenticated,
   });
 
-  if (!isAuthenticated) {
+  /* if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <Card className="w-full max-w-md">
@@ -46,7 +46,7 @@ export default function Home() {
         </Card>
       </div>
     );
-  }
+  } */
 
   return (
     <DashboardLayout
