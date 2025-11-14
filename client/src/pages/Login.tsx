@@ -40,27 +40,35 @@ export default function Login() {
   };
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  e.preventDefault();
+  setIsLoading(true);
 
-    try {
-      await registerMutation.mutateAsync({
-        name,
-        email,
-        password,
-        companyId,
-      });
-      toast.success("Registration successful! Please sign in.");
-      setShowRegister(false);
-      setEmail("");
-      setPassword("");
-      setName("");
-    } catch (error: any) {
-      toast.error(error.message || "Registration failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  try {
+    console.log("Registering with:", { name, email, password, companyId });
+    
+    const result = await registerMutation.mutateAsync({
+      name,
+      email,
+      password,
+      companyId,
+    });
+    
+    console.log("Registration result:", result);
+    toast.success("Registration successful! Please sign in.");
+    setShowRegister(false);
+    setEmail("");
+    setPassword("");
+    setName("");
+  } catch (error: any) {
+    console.error("Registration error:", error);
+    console.error("Error message:", error.message);
+    console.error("Error data:", error.data);
+    toast.error(error.message || error.data?.message || "Registration failed");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
