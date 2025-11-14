@@ -34,19 +34,21 @@ export default function Login() {
     // Guardar el token en localStorage
     if (result.token) {
       localStorage.setItem('auth_token', result.token);
-      // Espera un poco para que se guarde el token
-      await new Promise(resolve => setTimeout(resolve, 100));
     }
     
     toast.success("Login successful!");
-    // Redirige al dashboard
-    setLocation("/");
+    
+    // Redirige al dashboard (sin await, pero espera un poco antes de terminar)
+    setTimeout(() => {
+      setLocation("/");
+    }, 500);
+    
   } catch (error: any) {
     toast.error(error.message || "Login failed");
-  } finally {
     setIsLoading(false);
   }
 };
+
 
 
 
