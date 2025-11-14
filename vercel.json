@@ -1,13 +1,9 @@
 {
-  "build": {
-    "env": {
+  "buildCommand": "cd client && pnpm install && pnpm build",
+  "outputDirectory": "client/dist",
+  "installCommand": "echo 'skip root install'",
+  "framework": null,
+  "env": {
       "NODE_OPTIONS": "--max-old-space-size=6144" 
     }
-  },
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/dist/public/index.html"
-    }
-  ]
 }
