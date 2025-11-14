@@ -37,9 +37,13 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-const getBackendUrl = ( ) => {
+const getBackendUrl = () => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   if (backendUrl) {
+    // Asegúrate de que la URL incluya el protocolo
+    if (!backendUrl.startsWith('http' )) {
+      return `https://${backendUrl}`;
+    }
     return backendUrl;
   }
   // En desarrollo local, usa localhost:3000
