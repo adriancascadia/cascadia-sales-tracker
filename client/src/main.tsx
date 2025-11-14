@@ -37,16 +37,14 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-const getBackendUrl = () => {
+const getBackendUrl = ( ) => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   if (backendUrl) {
-    // Asegúrate de que la URL incluya el protocolo
     if (!backendUrl.startsWith('http' )) {
       return `https://${backendUrl}`;
     }
     return backendUrl;
   }
-  // En desarrollo local, usa localhost:3000
   return import.meta.env.DEV ? "http://localhost:3000" : window.location.origin;
 };
 
@@ -56,14 +54,25 @@ const trpcClient = trpc.createClient({
       url: `${getBackendUrl( )}/api/trpc`,
       transformer: superjson,
       fetch(input, init) {
+        const token = localStorage.getItem('auth_token');
+        const headers: Record<string, string> = {
+          ...(init?.headers as Record<string, string> || {}),
+        };
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
         return globalThis.fetch(input, {
           ...(init ?? {}),
+          headers,
           credentials: "include",
         });
       },
     }),
   ],
 });
+
 
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>

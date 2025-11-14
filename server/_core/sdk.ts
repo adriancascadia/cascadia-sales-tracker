@@ -257,50 +257,58 @@ class SDKServer {
   }
 
   async authenticateRequest(req: Request): Promise<User> {
-    // Regular authentication flow
+  // Intenta obtener el token del header Authorization primero
+  const authHeader = req.headers.authorization;
+  let token: string | null = null;
+  
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7); // Quita "Bearer "
+  }
+  
+  // Si no hay token en el header, intenta obtenerlo de las cookies
+  if (!token) {
     const cookies = this.parseCookies(req.headers.cookie);
-    const sessionCookie = cookies.get(COOKIE_NAME);
-    const session = await this.verifySession(sessionCookie);
+    token = cookies.get(COOKIE_NAME) || null;
+  }
+  
+  if (!token) {
+    throw ForbiddenError("No authentication token provided");
+  }
 
-    if (!session) {
-      throw ForbiddenError("Invalid session cookie");
+  // Verifica el token JWT
+  try {
+    const secretKey = this.getSessionSecret();
+    const { payload } = await jwtVerify(token, secretKey, {
+      algorithms: ["HS256"],
+    });
+    
+    const userId = (payload as any).userId;
+    const email = (payload as any).email;
+    
+    if (!userId) {
+      throw ForbiddenError("Invalid token payload");
     }
-
-    const sessionUserId = session.openId;
-    const signedInAt = new Date();
-    let user = await db.getUserByOpenId(sessionUserId);
-
-    // If user not in DB, sync from OAuth server automatically
-    if (!user) {
-      try {
-        const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
-        await db.upsertUser({
-          openId: userInfo.openId,
-          companyId: 1, // TODO: Get from email domain
-          name: userInfo.name || null,
-          email: userInfo.email ?? null,
-          loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
-          lastSignedIn: signedInAt,
-        });
-        user = await db.getUserByOpenId(userInfo.openId);
-      } catch (error) {
-        console.error("[Auth] Failed to sync user from OAuth:", error);
-        throw ForbiddenError("Failed to sync user info");
-      }
-    }
-
+    
+    // Obtén el usuario de la base de datos
+    const user = await db.getUserByEmail(email);
     if (!user) {
       throw ForbiddenError("User not found");
     }
-
+    
+    // Actualiza lastSignedIn
     await db.upsertUser({
-      openId: user.openId,
-      companyId: 1, // TODO: Get from email domain
-      lastSignedIn: signedInAt,
-    });
-
+  openId: user.openId,
+  companyId: user.companyId,
+  lastSignedIn: new Date(),
+});
+    
     return user;
+  } catch (error) {
+    console.error("[Auth] Token verification failed:", error);
+    throw ForbiddenError("Invalid authentication token");
   }
+}
+
 }
 
 export const sdk = new SDKServer();
