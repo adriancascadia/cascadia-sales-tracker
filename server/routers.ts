@@ -794,93 +794,92 @@ export const appRouter = router({
   company: companyRouter,
   aiCoach: aiCoachRouter,
   auth: router({
-  me: publicProcedure.query(opts => opts.ctx.user),
-  
-  getCompanyByEmail: publicProcedure
-    .input(z.object({ email: z.string().email() }))
-    .query(async ({ input }) => {
-      const emailDomain = input.email.split('@')[1];
-      const company = await db.getCompanyByDomain(emailDomain);
-      if (!company) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Company not found' });
-      }
-      return {
-        id: company.id,
-        name: company.name,
-        logo: company.logo,
-      };
-    }),
+    me: publicProcedure.query(opts => opts.ctx.user),
+    
+    getCompanyByEmail: publicProcedure
+      .input(z.object({ email: z.string().email() }))
+      .query(async ({ input }) => {
+        const emailDomain = input.email.split('@')[1];
+        const company = await db.getCompanyByDomain(emailDomain);
+        if (!company) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Company not found' });
+        }
+        return {
+          id: company.id,
+          name: company.name,
+          logo: company.logo,
+        };
+      }),
 
-  login: publicProcedure
-    .input(z.object({
-      email: z.string().email(),
-      password: z.string().min(1, "Password is required"),
-      companyId: z.number(),
-    }))
-    .mutation(async ({ input, ctx }) => {
-      const user = await db.loginUser(input.email, input.password);
-      
-      if (!user) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Invalid email or password",
+    login: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(1, "Password is required"),
+        companyId: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const user = await db.loginUser(input.email, input.password);
+        
+        if (!user) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid email or password",
+          });
+        }
+        
+        const { SignJWT } = await import("jose");
+        const token = await new SignJWT({ userId: user.id, email: user.email })
+          .setProtectedHeader({ alg: 'HS256' })
+          .setExpirationTime('7d')
+          .sign(new TextEncoder().encode(process.env.JWT_SECRET || 'secret'));
+        
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, cookieOptions);
+        
+        return {
+          success: true,
+          user,
+        };
+      }),
+
+    register: publicProcedure
+      .input(z.object({
+        name: z.string().min(1, "Name is required"),
+        email: z.string().email(),
+        password: z.string().min(6, "Password must be at least 6 characters"),
+        companyId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const existingUser = await db.getUserByEmail(input.email);
+        if (existingUser) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Email already registered",
+          });
+        }
+        
+        const result = await db.createLocalUser({
+          companyId: input.companyId,
+          name: input.name,
+          email: input.email,
+          password: input.password,
+          role: "user",
         });
-      }
-      
-      const { SignJWT } = await import("jose");
-      const token = await new SignJWT({ userId: user.id, email: user.email })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setExpirationTime('7d')
-        .sign(new TextEncoder().encode(process.env.JWT_SECRET || 'secret'));
-      
+        
+        return {
+          success: true,
+          message: "User registered successfully",
+        };
+      }),
+
+    logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, token, cookieOptions);
-      
+      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return {
         success: true,
-        user,
-      };
+      } as const;
     }),
-
-  register: publicProcedure
-    .input(z.object({
-      name: z.string().min(1, "Name is required"),
-      email: z.string().email(),
-      password: z.string().min(6, "Password must be at least 6 characters"),
-      companyId: z.number(),
-    }))
-    .mutation(async ({ input }) => {
-      const existingUser = await db.getUserByEmail(input.email);
-      if (existingUser) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Email already registered",
-        });
-      }
-      
-      const result = await db.createLocalUser({
-        companyId: input.companyId,
-        name: input.name,
-        email: input.email,
-        password: input.password,
-        role: "user",
-      });
-      
-      return {
-        success: true,
-        message: "User registered successfully",
-      };
-    }),
-
-  logout: publicProcedure.mutation(({ ctx }) => {
-    const cookieOptions = getSessionCookieOptions(ctx.req);
-    ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-    return {
-      success: true,
-    } as const;
   }),
-}),
-
   
   customers: customerRouter,
   routes: routeRouter,
@@ -936,3 +935,4 @@ export const appRouter = router({
   }),
 });
 
+export type AppRouter = typeof appRouter;
