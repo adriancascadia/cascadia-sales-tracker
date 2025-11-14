@@ -1097,3 +1097,87 @@ export async function deletePlaybookEntry(id: number) {
   
   return await db.delete(playbookEntries).where(eq(playbookEntries.id, id));
 }
+
+// ============= AUTHENTICATION FUNCTIONS =============
+
+import bcryptjs from "bcryptjs";
+
+export async function hashPassword(password: string): Promise<string> {
+  const salt = await bcryptjs.genSalt(10);
+  return bcryptjs.hash(password, salt);
+}
+
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcryptjs.compare(password, hash);
+}
+
+export async function createLocalUser(data: {
+  companyId: number;
+  name: string;
+  email: string;
+  password: string;
+  role?: "user" | "admin" | "manager" | "rep";
+}) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const hashedPassword = await hashPassword(data.password);
+
+  const result = await db.insert(users).values({
+    companyId: data.companyId,
+    name: data.name,
+    email: data.email,
+    password: hashedPassword,
+    role: data.role || "user",
+    openId: `local_${data.email}`,
+    loginMethod: "local",
+    lastSignedIn: new Date(),
+  });
+
+  return result;
+}
+
+export async function loginUser(email: string, password: string) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const user = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+
+  if (user.length === 0) {
+    return null;
+  }
+
+  const isPasswordValid = await verifyPassword(password, user[0].password || "");
+
+  if (!isPasswordValid) {
+    return null;
+  }
+
+  // Actualizar lastSignedIn
+  await db
+    .update(users)
+    .set({ lastSignedIn: new Date() })
+    .where(eq(users.id, user[0].id));
+
+  return user[0];
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user: database not available");
+    return undefined;
+  }
+
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}

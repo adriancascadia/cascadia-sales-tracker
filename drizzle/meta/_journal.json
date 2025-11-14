@@ -64,6 +64,20 @@
       "when": 1762535403612,
       "tag": "0008_glamorous_johnny_blaze",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1763146644713,
+      "tag": "0009_solid_kingpin",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1763146857676,
+      "tag": "0010_furry_war_machine",
+      "breakpoints": true
     }
   ]
 }
