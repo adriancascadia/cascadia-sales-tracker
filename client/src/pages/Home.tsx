@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { Users, MapPin, Package, FileText, TrendingUp, Clock, Bell, BarChart3, Map, Image, Gauge, Brain, Smartphone } from "lucide-react";
 import { Link } from "wouter";
-
+//home
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
   const { data: overview, isLoading } = trpc.analytics.getOverview.useQuery(undefined, {
