@@ -37,10 +37,19 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+const getBackendUrl = ( ) => {
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  if (backendUrl) {
+    return backendUrl;
+  }
+  // En desarrollo local, usa localhost:3000
+  return import.meta.env.DEV ? "http://localhost:3000" : window.location.origin;
+};
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: "/api/trpc",
+      url: `${getBackendUrl( )}/api/trpc`,
       transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, {
