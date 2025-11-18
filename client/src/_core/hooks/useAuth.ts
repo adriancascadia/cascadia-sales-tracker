@@ -2,6 +2,7 @@ import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
+import { useLocation } from "wouter";
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
@@ -12,75 +13,62 @@ export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
     options ?? {};
   const utils = trpc.useUtils();
+  const [, setLocation] = useLocation();
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
     retry: false,
     refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
+      // Clear token from localStorage
+      localStorage.removeItem("auth_token");
+      // Clear user data from cache
       utils.auth.me.setData(undefined, null);
+      // Redirect to login
+      setLocation("/login");
     },
   });
 
   const logout = useCallback(async () => {
-  try {
-    // Elimina el token de localStorage
-    localStorage.removeItem("auth_token");
-    
-    // Invalida el cache de autenticación
-    utils.auth.me.setData(undefined, null);
-    await utils.auth.me.invalidate();
-    
-    // Redirige a login
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
+    try {
+      await logoutMutation.mutateAsync();
+    } catch (error: unknown) {
+      // Even if logout fails on server, clear local state
+      console.error("Logout error:", error);
+      localStorage.removeItem("auth_token");
+      utils.auth.me.setData(undefined, null);
+      setLocation("/login");
     }
-  } catch (error: unknown) {
-    console.error("Logout error:", error);
-    // Aún así elimina el token y redirige
-    localStorage.removeItem("auth_token");
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    }
-  }
-}, [utils]);
-
+  }, [logoutMutation, utils, setLocation]);
 
   const state = useMemo(() => {
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
     return {
       user: meQuery.data ?? null,
-      loading: meQuery.isLoading || logoutMutation.isPending,
-      error: meQuery.error ?? logoutMutation.error ?? null,
+      loading: meQuery.isLoading || meQuery.isFetching,
+      error: meQuery.error ?? null,
       isAuthenticated: Boolean(meQuery.data),
     };
-  }, [
-    meQuery.data,
-    meQuery.error,
-    meQuery.isLoading,
-    logoutMutation.error,
-    logoutMutation.isPending,
-  ]);
+  }, [meQuery.data, meQuery.error, meQuery.isLoading, meQuery.isFetching]);
 
+  // Redirect unauthenticated users if requested
   useEffect(() => {
     if (!redirectOnUnauthenticated) return;
-    if (meQuery.isLoading || logoutMutation.isPending) return;
+    if (state.loading) return;
     if (state.user) return;
     if (typeof window === "undefined") return;
     if (window.location.pathname === redirectPath) return;
 
-    window.location.href = redirectPath
+    // Use wouter for client-side navigation instead of window.location
+    setLocation(redirectPath);
   }, [
     redirectOnUnauthenticated,
     redirectPath,
-    logoutMutation.isPending,
-    meQuery.isLoading,
+    state.loading,
     state.user,
+    setLocation,
   ]);
 
   return {
