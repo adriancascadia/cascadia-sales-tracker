@@ -5,15 +5,5 @@
   "framework": null,
   "env": {
       "NODE_OPTIONS": "--max-old-space-size=6144" 
-    },
-  "rewrites": [
-    {
-      "source": "/api/trpc(.*)",
-      "destination": "https://cascadia-sales-tracker-production-4868.up.railway.app/api/trpc$1"
-    },
-    {
-      "source": "/(.* )",
-      "destination": "/index.html"
     }
-  ]
 }
