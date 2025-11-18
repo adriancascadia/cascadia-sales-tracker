@@ -133,7 +133,7 @@ The Cascadia Sales Tracker is **fully functional and production-ready**. All 20+
 - Logo positioned at top-left of sidebar ✓
 - Logo size: 32x32 pixels (expanded view) ✓
 - Logo size: 12x12 pixels (collapsed view) ✓
-- Logo file: `/cascadia-icon.png` ✓
+- Logo file: `/cascadia-logo.png` ✓
 - "Cascadia Sales Tracker" text displays next to logo ✓
 - Logo is clickable and functional ✓
 

@@ -203,7 +203,7 @@ function DashboardLayoutContent({
                 <>
                   <div className="flex items-center gap-3 min-w-0">
                     <img
-                      src="/cascadia-icon.png"
+                      src="/cascadia-logo.png"
                       className="h-12 w-12 rounded-lg object-cover ring-2 ring-border shrink-0"
                       alt="Logo"
                     />

@@ -40,6 +40,7 @@ export default function Login() {
 
   const loginMutation = trpc.auth.login.useMutation();
   const registerMutation = trpc.auth.register.useMutation();
+  const utils = trpc.useUtils();
 
   const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -57,7 +58,7 @@ export default function Login() {
       localStorage.setItem("auth_token", result.token);
       
       // Invalida el cache de tRPC para que se refresque useAuth()
-      const utils = trpc.useUtils();
+      
       await utils.auth.me.invalidate();
     }
 
