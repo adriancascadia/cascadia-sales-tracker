@@ -210,8 +210,8 @@ export function sendPushNotification(
 ): void {
   if (Notification.permission === "granted") {
     new Notification(title, {
-      icon: "/cascadia-logo.png",
-      badge: "/cascadia-logo.png",
+      icon: "/cascadia-icon.png",
+      badge: "/cascadia-icon.png",
       ...options,
     });
   }

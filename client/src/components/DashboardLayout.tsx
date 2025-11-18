@@ -188,7 +188,7 @@ function DashboardLayoutContent({
               {isCollapsed ? (
                 <div className="relative h-8 w-8 shrink-0 group">
                   <img
-                    src="/cascadia-logo.png"
+                    src="/cascadia-icon.png"
                     className="h-10 w-10 rounded-lg object-cover ring-2 ring-border"
                     alt="Cascadia"
                   />
@@ -203,7 +203,7 @@ function DashboardLayoutContent({
                 <>
                   <div className="flex items-center gap-3 min-w-0">
                     <img
-                      src="/cascadia-logo.png"
+                      src="/cascadia-icon.png"
                       className="h-12 w-12 rounded-lg object-cover ring-2 ring-border shrink-0"
                       alt="Logo"
                     />
