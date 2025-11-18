@@ -42,31 +42,37 @@ export default function Login() {
   const registerMutation = trpc.auth.register.useMutation();
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  e.preventDefault();
+  setIsLoading(true);
 
-    try {
-      const result = await loginMutation.mutateAsync({
-        email,
-        password,
-        companyId,
-      });
+  try {
+    const result = await loginMutation.mutateAsync({
+      email,
+      password,
+      companyId,
+    });
 
-      // Guardar el token en localStorage
-      if (result.token) {
-        localStorage.setItem("auth_token", result.token);
-      }
-
-      toast.success("Login successful!");
-
-      useEffect(() => {
-            setLocation("/");
-        }, [setLocation]);
-    } catch (error: any) {
-      toast.error(error.message || "Login failed");
-      setIsLoading(false);
+    // Guardar el token en localStorage
+    if (result.token) {
+      localStorage.setItem("auth_token", result.token);
+      
+      // Invalida el cache de tRPC para que se refresque useAuth()
+      const utils = trpc.useUtils();
+      await utils.auth.me.invalidate();
     }
-  };
+
+    toast.success("Login successful!");
+
+    // Redirige después de un pequeño delay
+    setTimeout(() => {
+      setLocation("/");
+    }, 500);
+  } catch (error: any) {
+    toast.error(error.message || "Login failed");
+    setIsLoading(false);
+  }
+};
+
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
