@@ -188,7 +188,7 @@ function DashboardLayoutContent({
               {isCollapsed ? (
                 <div className="relative h-8 w-8 shrink-0 group">
                   <img
-                    src="/cascadia-icon.png"
+                    src="/cascadia-logo.png"
                     className="h-10 w-10 rounded-lg object-cover ring-2 ring-border"
                     alt="Cascadia"
                   />
