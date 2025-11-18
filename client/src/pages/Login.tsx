@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,10 +59,9 @@ export default function Login() {
 
       toast.success("Login successful!");
 
-      // Redirige al dashboard (sin await, pero espera un poco antes de terminar)
-      setTimeout(() => {
-        setLocation("/");
-      }, 500);
+      useEffect(() => {
+            setLocation("/");
+        }, [setLocation]);
     } catch (error: any) {
       toast.error(error.message || "Login failed");
       setIsLoading(false);
@@ -127,24 +126,6 @@ export default function Login() {
               </div>
             </div>
           <CardTitle className="text-3xl font-bold">{APP_TITLE}</CardTitle>
-          <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                <span>Real-time GPS tracking</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>Check-in/Check-out logging</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Package className="h-4 w-4" />
-                <span>Order management</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <FileText className="h-4 w-4" />
-                <span>Photo documentation</span>
-              </div>
-            </div>
           <CardDescription>
             {showRegister ? "Create a new account" : "Sign in to your account"}
           </CardDescription>
