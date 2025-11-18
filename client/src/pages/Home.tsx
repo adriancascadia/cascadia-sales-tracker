@@ -4,48 +4,32 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { Users, MapPin, Package, FileText, TrendingUp, Clock, Bell, BarChart3, Map, Image, Gauge, Brain, Smartphone } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useEffect } from "react";
 //home
 export default function Home() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
+  const [, setLocation] = useLocation();
   const { data: overview, isLoading } = trpc.analytics.getOverview.useQuery(undefined, {
     enabled: isAuthenticated,
   });
 
-  if (!isAuthenticated) {
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      setLocation("/login");
+    }
+  }, [loading, isAuthenticated, setLocation]);
+
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold">SalesForce Tracker</CardTitle>
-            <CardDescription>Track your field sales team in real-time</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                <span>Real-time GPS tracking</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>Check-in/Check-out logging</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Package className="h-4 w-4" />
-                <span>Order management</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <FileText className="h-4 w-4" />
-                <span>Photo documentation</span>
-              </div>
-            </div>
-            <Button className="w-full" asChild>
-              <a href={import.meta.env.VITE_OAUTH_PORTAL_URL}>Sign In</a>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Loading...</div>
       </div>
     );
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (
