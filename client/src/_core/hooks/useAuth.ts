@@ -25,21 +25,28 @@ export function useAuth(options?: UseAuthOptions) {
   });
 
   const logout = useCallback(async () => {
-    try {
-      await logoutMutation.mutateAsync();
-    } catch (error: unknown) {
-      if (
-        error instanceof TRPCClientError &&
-        error.data?.code === "UNAUTHORIZED"
-      ) {
-        return;
-      }
-      throw error;
-    } finally {
-      utils.auth.me.setData(undefined, null);
-      await utils.auth.me.invalidate();
+  try {
+    // Elimina el token de localStorage
+    localStorage.removeItem("auth_token");
+    
+    // Invalida el cache de autenticación
+    utils.auth.me.setData(undefined, null);
+    await utils.auth.me.invalidate();
+    
+    // Redirige a login
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
     }
-  }, [logoutMutation, utils]);
+  } catch (error: unknown) {
+    console.error("Logout error:", error);
+    // Aún así elimina el token y redirige
+    localStorage.removeItem("auth_token");
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+  }
+}, [utils]);
+
 
   const state = useMemo(() => {
     localStorage.setItem(
