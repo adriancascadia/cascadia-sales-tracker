@@ -24,7 +24,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
+import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
 
 // Default menu items - can be overridden by navItems prop
@@ -47,20 +47,25 @@ export default function DashboardLayout({
 }) {
   // Convert navItems to menuItems format
   const menuItems = navItems
-    ? navItems.map(item => ({ icon: item.icon, label: item.label, path: item.href }))
+    ? navItems.map(item => ({
+        icon: item.icon,
+        label: item.label,
+        path: item.href,
+      }))
     : defaultMenuItems;
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
   if (loading) {
-    return <DashboardLayoutSkeleton />
+    return <DashboardLayoutSkeleton />;
   }
 
   if (!user) {
@@ -86,7 +91,7 @@ export default function DashboardLayout({
           </div>
           <Button
             onClick={() => {
-              window.location.href = getLoginUrl();
+              setLocation("/login");
             }}
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all"
@@ -106,7 +111,10 @@ export default function DashboardLayout({
         } as CSSProperties
       }
     >
-      <DashboardLayoutContent setSidebarWidth={setSidebarWidth} menuItems={menuItems}>
+      <DashboardLayoutContent
+        setSidebarWidth={setSidebarWidth}
+        menuItems={menuItems}
+      >
         {children}
       </DashboardLayoutContent>
     </SidebarProvider>
@@ -194,11 +202,11 @@ function DashboardLayoutContent({
               ) : (
                 <>
                   <div className="flex items-center gap-3 min-w-0">
-                  <img
-                    src="/cascadia-icon.png"
-                    className="h-12 w-12 rounded-lg object-cover ring-2 ring-border shrink-0"
-                    alt="Logo"
-                  />
+                    <img
+                      src="/cascadia-icon.png"
+                      className="h-12 w-12 rounded-lg object-cover ring-2 ring-border shrink-0"
+                      alt="Logo"
+                    />
                     <div className="flex flex-col min-w-0">
                       <span className="font-bold text-base tracking-tight truncate">
                         Cascadia
