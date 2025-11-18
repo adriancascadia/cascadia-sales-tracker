@@ -127,6 +127,24 @@ export default function Login() {
               </div>
             </div>
           <CardTitle className="text-3xl font-bold">{APP_TITLE}</CardTitle>
+          <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4" />
+                <span>Real-time GPS tracking</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4" />
+                <span>Check-in/Check-out logging</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Package className="h-4 w-4" />
+                <span>Order management</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <FileText className="h-4 w-4" />
+                <span>Photo documentation</span>
+              </div>
+            </div>
           <CardDescription>
             {showRegister ? "Create a new account" : "Sign in to your account"}
           </CardDescription>
