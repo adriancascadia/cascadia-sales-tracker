@@ -37,24 +37,16 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-const getBackendUrl = ( ) => {
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
-  if (backendUrl) {
-    if (!backendUrl.startsWith('http' )) {
-      return `https://${backendUrl}`;
-    }
-    return backendUrl;
-  }
-  return import.meta.env.DEV ? "http://localhost:3000" : window.location.origin;
-};
-
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: `${getBackendUrl( )}/api/trpc`,
+      url: "/api/trpc",
       transformer: superjson,
       fetch(input, init) {
+        // Get JWT token from localStorage
         const token = localStorage.getItem('auth_token');
+        
+        // Create headers with token if available
         const headers: Record<string, string> = {
           ...(init?.headers as Record<string, string> || {}),
         };
@@ -65,14 +57,13 @@ const trpcClient = trpc.createClient({
         
         return globalThis.fetch(input, {
           ...(init ?? {}),
-          headers,
           credentials: "include",
+          headers,
         });
       },
     }),
   ],
 });
-
 
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
