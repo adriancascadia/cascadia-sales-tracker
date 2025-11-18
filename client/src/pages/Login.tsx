@@ -2,14 +2,20 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { APP_LOGO, APP_TITLE } from "@/const";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 export default function Login() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [companyId, setCompanyId] = useState(1);
@@ -21,67 +27,64 @@ export default function Login() {
   const registerMutation = trpc.auth.register.useMutation();
 
   const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
+    e.preventDefault();
+    setIsLoading(true);
 
-  try {
-    const result = await loginMutation.mutateAsync({
-      email,
-      password,
-      companyId,
-    });
-    
-    // Guardar el token en localStorage
-    if (result.token) {
-      localStorage.setItem('auth_token', result.token);
+    try {
+      const result = await loginMutation.mutateAsync({
+        email,
+        password,
+        companyId,
+      });
+
+      // Guardar el token en localStorage
+      if (result.token) {
+        localStorage.setItem("auth_token", result.token);
+      }
+
+      toast.success("Login successful!");
+
+      // Redirige al dashboard (sin await, pero espera un poco antes de terminar)
+      setTimeout(() => {
+        setLocation("/");
+      }, 500);
+    } catch (error: any) {
+      toast.error(error.message || "Login failed");
+      setIsLoading(false);
     }
-    
-    toast.success("Login successful!");
-    
-    // Redirige al dashboard (sin await, pero espera un poco antes de terminar)
-    setTimeout(() => {
-      setLocation("/");
-    }, 500);
-    
-  } catch (error: any) {
-    toast.error(error.message || "Login failed");
-    setIsLoading(false);
-  }
-};
-
-
-
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
+    e.preventDefault();
+    setIsLoading(true);
 
-  try {
-    console.log("Registering with:", { name, email, password, companyId });
-    
-    const result = await registerMutation.mutateAsync({
-      name,
-      email,
-      password,
-      companyId,
-    });
-    
-    console.log("Registration result:", result);
-    toast.success("Registration successful! Please sign in.");
-    setShowRegister(false);
-    setEmail("");
-    setPassword("");
-    setName("");
-  } catch (error: any) {
-    console.error("Registration error:", error);
-    console.error("Error message:", error.message);
-    console.error("Error data:", error.data);
-    toast.error(error.message || error.data?.message || "Registration failed");
-  } finally {
-    setIsLoading(false);
-  }
-};
+    try {
+      console.log("Registering with:", { name, email, password, companyId });
 
+      const result = await registerMutation.mutateAsync({
+        name,
+        email,
+        password,
+        companyId,
+      });
+
+      console.log("Registration result:", result);
+      toast.success("Registration successful! Please sign in.");
+      setShowRegister(false);
+      setEmail("");
+      setPassword("");
+      setName("");
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      console.error("Error message:", error.message);
+      console.error("Error data:", error.data);
+      toast.error(
+        error.message || error.data?.message || "Registration failed"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -96,7 +99,10 @@ export default function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={showRegister ? handleRegister : handleLogin} className="space-y-4">
+          <form
+            onSubmit={showRegister ? handleRegister : handleLogin}
+            className="space-y-4"
+          >
             {showRegister && (
               <div>
                 <label className="text-sm font-medium">Name</label>
@@ -104,7 +110,7 @@ export default function Login() {
                   type="text"
                   placeholder="Your name"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={e => setName(e.target.value)}
                   required
                 />
               </div>
@@ -116,7 +122,7 @@ export default function Login() {
                 type="email"
                 placeholder="your@email.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
                 required
               />
             </div>
@@ -127,22 +133,22 @@ export default function Login() {
                 type="password"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={e => setPassword(e.target.value)}
                 required
               />
             </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {showRegister ? "Creating account..." : "Signing in..."}
                 </>
-              ) : showRegister ? "Register" : "Sign In"}
+              ) : showRegister ? (
+                "Register"
+              ) : (
+                "Sign In"
+              )}
             </Button>
           </form>
 
