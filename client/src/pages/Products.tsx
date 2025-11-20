@@ -120,7 +120,7 @@ export default function Products() {
                         <SelectValue placeholder="Select distributor (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        {/* <SelectItem value="">None</SelectItem> */}
                         {distributors?.map((dist: any) => (
                           <SelectItem key={dist.id} value={dist.id.toString()}>
                             {dist.name}
