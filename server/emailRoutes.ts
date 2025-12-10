@@ -3,6 +3,7 @@ import { protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import { sendOrderConfirmationEmail, sendVisitReminderEmail, sendAlertEmail } from "./email";
+import { logger } from "./_core/logger";
 
 export const emailRouter = router({
   sendOrderConfirmation: protectedProcedure
@@ -35,7 +36,7 @@ export const emailRouter = router({
         
         return { success: true };
       } catch (error) {
-        console.error('Failed to send confirmation email:', error);
+        logger.error('Failed to send confirmation email:', { error });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to send confirmation email',
@@ -72,7 +73,7 @@ export const emailRouter = router({
         
         return { success: true };
       } catch (error) {
-        console.error('Failed to send visit reminder:', error);
+        logger.error('Failed to send visit reminder:', { error });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to send visit reminder',
@@ -103,7 +104,7 @@ export const emailRouter = router({
         
         return { success: true };
       } catch (error) {
-        console.error('Failed to send alert email:', error);
+        logger.error('Failed to send alert email:', { error });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to send alert email',

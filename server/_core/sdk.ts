@@ -7,6 +7,7 @@ import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
 import { ENV } from "./env";
+import { logger } from "./logger";
 import type {
   ExchangeTokenRequest,
   ExchangeTokenResponse,
@@ -14,6 +15,7 @@ import type {
   GetUserInfoWithJwtRequest,
   GetUserInfoWithJwtResponse,
 } from "./types/manusTypes";
+
 // Utility function
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
@@ -30,10 +32,10 @@ const GET_USER_INFO_WITH_JWT_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserI
 
 class OAuthService {
   constructor(private client: ReturnType<typeof axios.create>) {
-    console.log("[OAuth] Initialized with baseURL:", ENV.oAuthServerUrl);
+    logger.debug("[OAuth] Initialized with baseURL:", { url: ENV.oAuthServerUrl });
     if (!ENV.oAuthServerUrl) {
-      console.error(
-        "[OAuth] ERROR: OAUTH_SERVER_URL is not configured! Set OAUTH_SERVER_URL environment variable."
+      logger.warn(
+        "[OAuth] OAUTH_SERVER_URL is not configured. OAuth features will be unavailable."
       );
     }
   }
@@ -201,7 +203,7 @@ class SDKServer {
     cookieValue: string | undefined | null
   ): Promise<{ openId: string; appId: string; name: string } | null> {
     if (!cookieValue) {
-      console.warn("[Auth] Missing session cookie");
+      logger.warn("[Auth] Missing session cookie");
       return null;
     }
 
@@ -217,7 +219,7 @@ class SDKServer {
         !isNonEmptyString(appId) ||
         !isNonEmptyString(name)
       ) {
-        console.warn("[Auth] Session payload missing required fields");
+        logger.warn("[Auth] Session payload missing required fields");
         return null;
       }
 
@@ -227,7 +229,7 @@ class SDKServer {
         name,
       };
     } catch (error) {
-      console.warn("[Auth] Session verification failed", String(error));
+      logger.warn("[Auth] Session verification failed", { error: String(error) });
       return null;
     }
   }
@@ -257,58 +259,57 @@ class SDKServer {
   }
 
   async authenticateRequest(req: Request): Promise<User> {
-  // Intenta obtener el token del header Authorization primero
-  const authHeader = req.headers.authorization;
-  let token: string | null = null;
-  
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.substring(7); // Quita "Bearer "
-  }
-  
-  // Si no hay token en el header, intenta obtenerlo de las cookies
-  if (!token) {
-    const cookies = this.parseCookies(req.headers.cookie);
-    token = cookies.get(COOKIE_NAME) || null;
-  }
-  
-  if (!token) {
-    throw ForbiddenError("No authentication token provided");
-  }
-
-  // Verifica el token JWT
-  try {
-    const secretKey = this.getSessionSecret();
-    const { payload } = await jwtVerify(token, secretKey, {
-      algorithms: ["HS256"],
-    });
+    // Intenta obtener el token del header Authorization primero
+    const authHeader = req.headers.authorization;
+    let token: string | null = null;
     
-    const userId = (payload as any).userId;
-    const email = (payload as any).email;
-    
-    if (!userId) {
-      throw ForbiddenError("Invalid token payload");
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Quita "Bearer "
     }
     
-    // Obtén el usuario de la base de datos
-    const user = await db.getUserByEmail(email);
-    if (!user) {
-      throw ForbiddenError("User not found");
+    // Si no hay token en el header, intenta obtenerlo de las cookies
+    if (!token) {
+      const cookies = this.parseCookies(req.headers.cookie);
+      token = cookies.get(COOKIE_NAME) || null;
     }
     
-    // Actualiza lastSignedIn
-    await db.upsertUser({
-  openId: user.openId,
-  companyId: user.companyId,
-  lastSignedIn: new Date(),
-});
-    
-    return user;
-  } catch (error) {
-    console.error("[Auth] Token verification failed:", error);
-    throw ForbiddenError("Invalid authentication token");
-  }
-}
+    if (!token) {
+      throw ForbiddenError("No authentication token provided");
+    }
 
+    // Verifica el token JWT
+    try {
+      const secretKey = this.getSessionSecret();
+      const { payload } = await jwtVerify(token, secretKey, {
+        algorithms: ["HS256"],
+      });
+      
+      const userId = (payload as any).userId;
+      const email = (payload as any).email;
+      
+      if (!userId) {
+        throw ForbiddenError("Invalid token payload");
+      }
+      
+      // Obtén el usuario de la base de datos
+      const user = await db.getUserByEmail(email);
+      if (!user) {
+        throw ForbiddenError("User not found");
+      }
+      
+      // Actualiza lastSignedIn
+      await db.upsertUser({
+        openId: user.openId,
+        companyId: user.companyId,
+        lastSignedIn: new Date(),
+      });
+      
+      return user;
+    } catch (error) {
+      logger.error("[Auth] Token verification failed:", { error });
+      throw ForbiddenError("Invalid authentication token");
+    }
+  }
 }
 
 export const sdk = new SDKServer();

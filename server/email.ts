@@ -1,4 +1,5 @@
 import { ENV } from './_core/env';
+import { logger } from './_core/logger';
 
 interface EmailOptions {
   to: string;
@@ -52,13 +53,13 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
     });
 
     if (!response.ok) {
-      console.error('Email send failed:', await response.text());
+      logger.error('Email send failed:', { error: await response.text() });
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error('Error sending email:', error);
+    logger.error('Error sending email:', { error });
     return false;
   }
 }

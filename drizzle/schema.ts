@@ -415,3 +415,21 @@ export const playbookBookmarks = mysqlTable("playbook_bookmarks", {
 
 export type PlaybookBookmark = typeof playbookBookmarks.$inferSelect;
 export type InsertPlaybookBookmark = typeof playbookBookmarks.$inferInsert;
+
+/**
+ * User notification preferences
+ */
+export const notificationPreferences = mysqlTable("notification_preferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  emailEnabled: boolean("emailEnabled").default(true).notNull(),
+  smsEnabled: boolean("smsEnabled").default(false).notNull(),
+  pushEnabled: boolean("pushEnabled").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("notificationPreferences_userId_idx").on(table.userId),
+}));
+
+export type NotificationPreference = typeof notificationPreferences.$inferSelect;
+export type InsertNotificationPreference = typeof notificationPreferences.$inferInsert;

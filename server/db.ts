@@ -18,18 +18,21 @@ import {
   distributors, InsertDistributor, Distributor,
   playbookCategories, InsertPlaybookCategory, PlaybookCategory,
   playbookEntries, InsertPlaybookEntry, PlaybookEntry,
-  playbookBookmarks, InsertPlaybookBookmark, PlaybookBookmark
+  playbookBookmarks, InsertPlaybookBookmark, PlaybookBookmark,
+  notificationPreferences, InsertNotificationPreference, NotificationPreference
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { logger } from './_core/logger';
+import { MySqlUpdateSetSource } from 'drizzle-orm/mysql-core';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  if (!_db) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _db = drizzle(process.env.DATABASE_URL!);
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      logger.warn("[Database] Failed to connect:", { error });
       _db = null;
     }
   }
@@ -45,7 +48,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
+    logger.warn("[Database] Cannot upsert user: database not available");
     return;
   }
 
@@ -54,21 +57,23 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       openId: user.openId,
       companyId: user.companyId || 1, // Default to company 1 for now
     };
-    const updateSet: Record<string, unknown> = {};
 
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
+    const updateSet: MySqlUpdateSetSource<typeof users> = {
+      companyId: values.companyId,
     };
 
-    textFields.forEach(assignNullable);
-
+    if (user.name !== undefined) {
+      values.name = user.name;
+      updateSet.name = user.name;
+    }
+    if (user.email !== undefined) {
+      values.email = user.email;
+      updateSet.email = user.email;
+    }
+    if (user.loginMethod !== undefined) {
+      values.loginMethod = user.loginMethod;
+      updateSet.loginMethod = user.loginMethod;
+    }
     if (user.lastSignedIn !== undefined) {
       values.lastSignedIn = user.lastSignedIn;
       updateSet.lastSignedIn = user.lastSignedIn;
@@ -93,7 +98,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       set: updateSet,
     });
   } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
+    logger.error("[Database] Failed to upsert user:", { error });
     throw error;
   }
 }
@@ -101,13 +106,17 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
+    logger.warn("[Database] Cannot get user: database not available");
     return undefined;
   }
 
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  try {
+    const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  } catch (error) {
+    logger.error("[Database] Failed to get user:", { error });
+    return undefined;
+  }
 }
 
 export async function getAllUsers() {
@@ -466,7 +475,7 @@ export async function getPhotosByVisitId(visitId: number) {
   
   return await db.select().from(photos)
     .where(eq(photos.visitId, visitId))
-    .orderBy(asc(photos.takenAt));
+    .orderBy(desc(photos.takenAt));
 }
 
 export async function getPhotosByCustomerId(customerId: number) {
@@ -804,186 +813,17 @@ export async function getGpsTracksForRouteWithinTimeRange(routeId: number, start
 export async function getCompanyByDomain(domain: string): Promise<Company | undefined> {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot get company: database not available");
-    return undefined;
-  }
-
-  const result = await db.select().from(companies).where(eq(companies.domain, domain)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
-}
-
-export async function getCompanyById(id: number): Promise<Company | undefined> {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get company: database not available");
-    return undefined;
-  }
-
-  const result = await db.select().from(companies).where(eq(companies.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
-}
-
-export async function createCompany(company: { name: string; domain: string; logo?: string; plan?: string }): Promise<Company> {
-  const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
-
-  const result = await db.insert(companies).values({
-    name: company.name,
-    domain: company.domain,
-    logo: company.logo,
-    plan: (company.plan as any) || "starter",
-  });
-
-  const newCompany = await getCompanyById(Number(result[0].insertId));
-  if (!newCompany) {
-    throw new Error("Failed to create company");
-  }
-  return newCompany;
-}
-
-
-// ============= COMPANY MANAGEMENT FUNCTIONS =============
-
-export async function getUsersByCompanyId(companyId: number) {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get users: database not available");
-    return [];
-  }
-
-  try {
-    const result = await db.select().from(users).where(eq(users.companyId, companyId));
-    return result;
-  } catch (error) {
-    console.error("[Database] Failed to get users by company:", error);
-    return [];
-  }
-}
-
-export async function getUserById(id: number) {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
+    logger.warn("[Database] Cannot get company: database not available");
     return undefined;
   }
 
   try {
-    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    const result = await db.select().from(companies).where(eq(companies.domain, domain)).limit(1);
     return result.length > 0 ? result[0] : undefined;
   } catch (error) {
-    console.error("[Database] Failed to get user:", error);
+    logger.error("[Database] Failed to get company by domain:", { error });
     return undefined;
   }
-}
-
-export async function createUser(user: { email: string; companyId: number; role: string; name: string; openId: string }) {
-  const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
-
-  try {
-    await db.insert(users).values({
-      email: user.email,
-      companyId: user.companyId,
-      role: user.role as any,
-      name: user.name,
-      openId: user.openId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      lastSignedIn: new Date(),
-    });
-    return { success: true };
-  } catch (error) {
-    console.error("[Database] Failed to create user:", error);
-    throw error;
-  }
-}
-
-export async function updateUser(id: number, updates: Partial<typeof users.$inferInsert>) {
-  const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
-
-  try {
-    await db.update(users).set({
-      ...updates,
-      updatedAt: new Date(),
-    }).where(eq(users.id, id));
-    return { success: true };
-  } catch (error) {
-    console.error("[Database] Failed to update user:", error);
-    throw error;
-  }
-}
-
-export async function deleteUser(id: number) {
-  const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
-
-  try {
-    await db.delete(users).where(eq(users.id, id));
-    return { success: true };
-  } catch (error) {
-    console.error("[Database] Failed to delete user:", error);
-    throw error;
-  }
-}
-
-export async function getCustomerCountByCompanyId(companyId: number): Promise<number> {
-  const db = await getDb();
-  if (!db) return 0;
-
-  try {
-    const result = await db.select({ count: sql`COUNT(*)` }).from(customers).where(eq(customers.companyId, companyId));
-    return Number(result[0]?.count || 0);
-  } catch (error) {
-    console.error("[Database] Failed to count customers:", error);
-    return 0;
-  }
-}
-
-export async function getOrderCountByCompanyId(companyId: number): Promise<number> {
-  const db = await getDb();
-  if (!db) return 0;
-
-  try {
-    const result = await db.select({ count: sql`COUNT(*)` }).from(orders).where(eq(orders.companyId, companyId));
-    return Number(result[0]?.count || 0);
-  } catch (error) {
-    console.error("[Database] Failed to count orders:", error);
-    return 0;
-  }
-}
-
-export async function getVisitCountByCompanyId(companyId: number): Promise<number> {
-  const db = await getDb();
-  if (!db) return 0;
-
-  try {
-    const result = await db.select({ count: sql`COUNT(*)` }).from(visits).where(eq(visits.companyId, companyId));
-    return Number(result[0]?.count || 0);
-  } catch (error) {
-    console.error("[Database] Failed to count visits:", error);
-    return 0;
-  }
-}
-
-
-// ============= PLAYBOOK FUNCTIONS =============
-
-export async function getPlaybookCategories(companyId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  
-  return await db.select().from(playbookCategories)
-    .where(eq(playbookCategories.companyId, companyId))
-    .orderBy(asc(playbookCategories.displayOrder));
 }
 
 export async function getPlaybookEntriesByCategory(companyId: number, categoryId: number) {
