@@ -1,13 +1,45 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Users, MapPin, Package, FileText, TrendingUp, Clock, LogIn, LogOut, Activity, CheckCircle2, Circle } from "lucide-react";
-import { useState, useEffect } from "react";
+import {
+  Users,
+  MapPin,
+  Package,
+  FileText,
+  TrendingUp,
+  Clock,
+  LogIn,
+  LogOut,
+  Activity,
+  CheckCircle2,
+  Circle,
+} from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 export default function Visits() {
@@ -15,30 +47,35 @@ export default function Visits() {
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [selectedVisitId, setSelectedVisitId] = useState<number | null>(null);
-  const [currentLocation, setCurrentLocation] = useState<{ latitude: string; longitude: string } | null>(null);
-  
+  const [currentLocation, setCurrentLocation] = useState<{
+    latitude: string;
+    longitude: string;
+  } | null>(null);
+
   const utils = trpc.useUtils();
   const { data: customers } = trpc.customers.list.useQuery();
   const { data: visits, isLoading } = trpc.visitData.list.useQuery();
   const { data: activeVisit } = trpc.visitData.getActive.useQuery();
-  
+
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        position => {
           setCurrentLocation({
             latitude: position.coords.latitude.toString(),
             longitude: position.coords.longitude.toString(),
           });
         },
-        (error) => {
+        error => {
           console.error("Error getting location:", error);
-          toast.error("Unable to get GPS location. Please enable location services.");
+          toast.error(
+            "Unable to get GPS location. Please enable location services."
+          );
         }
       );
     }
   }, []);
-  
+
   const checkInMutation = trpc.visitData.checkIn.useMutation({
     onSuccess: () => {
       utils.visitData.list.invalidate();
@@ -52,19 +89,21 @@ export default function Visits() {
       toast.error("Failed to check in: " + error.message);
     },
   });
-  
+
   const checkOutMutation = trpc.visitData.checkOut.useMutation({
     onSuccess: (data: any) => {
       utils.visitData.list.invalidate();
       utils.visitData.getActive.invalidate();
       utils.analytics.getOverview.invalidate();
-      toast.success(`Checked out successfully. Visit duration: ${data.duration} minutes`);
+      toast.success(
+        `Checked out successfully. Visit duration: ${data.duration} minutes`
+      );
     },
     onError: (error: any) => {
       toast.error("Failed to check out: " + error.message);
     },
   });
-  
+
   const addActivityMutation = trpc.visitData.addActivity.useMutation({
     onSuccess: () => {
       utils.visitData.getActivities.invalidate();
@@ -75,18 +114,18 @@ export default function Visits() {
       toast.error("Failed to log activity: " + error.message);
     },
   });
-  
+
   const handleCheckIn = () => {
     if (!selectedCustomerId) {
       toast.error("Please select a customer");
       return;
     }
-    
+
     if (!currentLocation) {
       toast.error("GPS location not available");
       return;
     }
-    
+
     checkInMutation.mutate({
       customerId: parseInt(selectedCustomerId),
       latitude: currentLocation.latitude,
@@ -94,24 +133,24 @@ export default function Visits() {
       visitType: "scheduled",
     });
   };
-  
+
   const handleCheckOut = () => {
     if (!activeVisit || !currentLocation) {
       toast.error("Unable to check out");
       return;
     }
-    
+
     checkOutMutation.mutate({
       visitId: activeVisit.id,
       latitude: currentLocation.latitude,
       longitude: currentLocation.longitude,
     });
   };
-  
+
   const handleAddActivity = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedVisitId) return;
-    
+
     const formData = new FormData(e.currentTarget);
     addActivityMutation.mutate({
       visitId: selectedVisitId,
@@ -121,17 +160,39 @@ export default function Visits() {
       competitorInfo: formData.get("competitorInfo") as string,
     });
   };
-  
+
   const formatDuration = (minutes: number | null) => {
     if (!minutes) return "N/A";
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   };
-  
+
   const formatDateTime = (dateString: string | Date) => {
     return new Date(dateString).toLocaleString();
   };
+
+  const fileInputRef = useRef(null);
+  const [visitPhoto, setVisitPhoto] = useState<File | null>(null);
+  const [visitPhotoPreview, setVisitPhotoPreview] = useState<string | null>(null);
+
+  const handleButtonClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const file = event.target.files?.[0] ?? null;
+  setVisitPhoto(file);
+
+  // preview (opcional)
+  if (file) {
+    const url = URL.createObjectURL(file);
+    setVisitPhotoPreview(url);
+  } else {
+    setVisitPhotoPreview(null);
+  }
+};
+
 
   return (
     <DashboardLayout
@@ -150,10 +211,12 @@ export default function Visits() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Visits</h1>
-            <p className="text-muted-foreground">Track customer visits and activities</p>
+            <p className="text-muted-foreground">
+              Track customer visits and activities
+            </p>
           </div>
         </div>
-        
+
         {activeVisit ? (
           <Card className="border-primary">
             <CardHeader>
@@ -161,26 +224,31 @@ export default function Visits() {
                 <Activity className="h-5 w-5 text-primary animate-pulse" />
                 Active Visit
               </CardTitle>
-              <CardDescription>
-                You are currently checked in
-              </CardDescription>
+              <CardDescription>You are currently checked in</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Customer:</span>
                   <span className="font-medium">
-                    {customers?.find((c: any) => c.id === activeVisit.customerId)?.name || "Unknown"}
+                    {customers?.find(
+                      (c: any) => c.id === activeVisit.customerId
+                    )?.name || "Unknown"}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Check-in Time:</span>
-                  <span className="font-medium">{formatDateTime(activeVisit.checkInTime)}</span>
+                  <span className="font-medium">
+                    {formatDateTime(activeVisit.checkInTime)}
+                  </span>
                 </div>
               </div>
-              
+
               <div className="flex gap-2">
-                <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
+                <Dialog
+                  open={isActivityDialogOpen}
+                  onOpenChange={setIsActivityDialogOpen}
+                >
                   <DialogTrigger asChild>
                     <Button
                       variant="outline"
@@ -207,15 +275,19 @@ export default function Visits() {
                               <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="sales_call">Sales Call</SelectItem>
-                              <SelectItem value="merchandising">Merchandising</SelectItem>
+                              <SelectItem value="sales_call">
+                                Sales Call
+                              </SelectItem>
+                              <SelectItem value="merchandising">
+                                Merchandising
+                              </SelectItem>
                               <SelectItem value="service">Service</SelectItem>
                               <SelectItem value="delivery">Delivery</SelectItem>
                               <SelectItem value="other">Other</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
-                        
+
                         <div className="grid gap-2">
                           <Label htmlFor="outcome">Outcome</Label>
                           <Select name="outcome">
@@ -223,36 +295,59 @@ export default function Visits() {
                               <SelectValue placeholder="Select outcome" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="order_placed">Order Placed</SelectItem>
-                              <SelectItem value="follow_up">Follow-up Needed</SelectItem>
-                              <SelectItem value="no_action">No Action</SelectItem>
-                              <SelectItem value="issue_resolved">Issue Resolved</SelectItem>
+                              <SelectItem value="order_placed">
+                                Order Placed
+                              </SelectItem>
+                              <SelectItem value="follow_up">
+                                Follow-up Needed
+                              </SelectItem>
+                              <SelectItem value="no_action">
+                                No Action
+                              </SelectItem>
+                              <SelectItem value="issue_resolved">
+                                Issue Resolved
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
-                        
+
                         <div className="grid gap-2">
                           <Label htmlFor="notes">Notes</Label>
                           <Textarea id="notes" name="notes" rows={4} />
                         </div>
-                        
+
                         <div className="grid gap-2">
-                          <Label htmlFor="competitorInfo">Competitor Information</Label>
-                          <Textarea id="competitorInfo" name="competitorInfo" rows={2} />
+                          <Label htmlFor="competitorInfo">
+                            Competitor Information
+                          </Label>
+                          <Textarea
+                            id="competitorInfo"
+                            name="competitorInfo"
+                            rows={2}
+                          />
                         </div>
                       </div>
                       <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setIsActivityDialogOpen(false)}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsActivityDialogOpen(false)}
+                        >
                           Cancel
                         </Button>
-                        <Button type="submit" disabled={addActivityMutation.isPending}>
-                          {addActivityMutation.isPending ? "Saving..." : "Save Activity"}
+                        <Button
+                          type="submit"
+                          disabled={addActivityMutation.isPending}
+                        >
+                          {addActivityMutation.isPending
+                            ? "Saving..."
+                            : "Save Activity"}
                         </Button>
                       </DialogFooter>
                     </form>
                   </DialogContent>
                 </Dialog>
-                
+
                 <Button
                   onClick={handleCheckOut}
                   disabled={checkOutMutation.isPending}
@@ -273,7 +368,10 @@ export default function Visits() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Dialog open={isCheckInDialogOpen} onOpenChange={setIsCheckInDialogOpen}>
+              <Dialog
+                open={isCheckInDialogOpen}
+                onOpenChange={setIsCheckInDialogOpen}
+              >
                 <DialogTrigger asChild>
                   <Button className="w-full">
                     <LogIn className="h-4 w-4 mr-2" />
@@ -290,33 +388,78 @@ export default function Visits() {
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
                       <Label htmlFor="customer">Customer *</Label>
-                      <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                      <Select
+                        value={selectedCustomerId}
+                        onValueChange={setSelectedCustomerId}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select customer" />
                         </SelectTrigger>
                         <SelectContent>
                           {customers?.map((customer: any) => (
-                            <SelectItem key={customer.id} value={customer.id.toString()}>
+                            <SelectItem
+                              key={customer.id}
+                              value={customer.id.toString()}
+                            >
                               {customer.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     {currentLocation && (
-                      <div className="text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4 inline mr-1" />
-                        GPS Location: {parseFloat(currentLocation.latitude).toFixed(6)}, {parseFloat(currentLocation.longitude).toFixed(6)}
-                      </div>
+                      <>
+                        <div className="text-sm text-muted-foreground">
+                          <MapPin className="h-4 w-4 inline mr-1" />
+                          GPS Location:{" "}
+                          {parseFloat(currentLocation.latitude).toFixed(
+                            6
+                          )}, {parseFloat(currentLocation.longitude).toFixed(6)}
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <Button
+                            variant="outline"
+                            className="flex-1"
+                            onClick={handleButtonClick}
+                          >
+                            Upload Photo
+                          </Button>
+
+                          <input
+                            type="file"
+                            accept="image/*"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            style={{ display: "none" }}
+                          />
+                        </div>
+
+                        {visitPhotoPreview && (
+                          <img
+                            src={visitPhotoPreview}
+                            alt="Preview"
+                            className="mt-2 w-full max-w-xs rounded-md border"
+                          />
+                        )}
+                      </>
                     )}
                   </div>
                   <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIsCheckInDialogOpen(false)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsCheckInDialogOpen(false)}
+                    >
                       Cancel
                     </Button>
-                    <Button onClick={handleCheckIn} disabled={checkInMutation.isPending || !currentLocation}>
-                      {checkInMutation.isPending ? "Checking In..." : "Check In"}
+                    <Button
+                      onClick={handleCheckIn}
+                      disabled={checkInMutation.isPending || !currentLocation}
+                    >
+                      {checkInMutation.isPending
+                        ? "Checking In..."
+                        : "Check In"}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -324,10 +467,10 @@ export default function Visits() {
             </CardContent>
           </Card>
         )}
-        
+
         <div>
           <h2 className="text-xl font-semibold mb-4">Visit History</h2>
-          
+
           {isLoading ? (
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
@@ -344,7 +487,9 @@ export default function Visits() {
           ) : visits && visits.length > 0 ? (
             <div className="space-y-4">
               {visits.map((visit: any) => {
-                const customer = customers?.find((c: any) => c.id === visit.customerId);
+                const customer = customers?.find(
+                  (c: any) => c.id === visit.customerId
+                );
                 return (
                   <Card key={visit.id}>
                     <CardContent className="p-6">
@@ -356,19 +501,27 @@ export default function Visits() {
                             ) : (
                               <Circle className="h-5 w-5 text-yellow-600" />
                             )}
-                            <h3 className="font-semibold text-lg">{customer?.name || "Unknown Customer"}</h3>
+                            <h3 className="font-semibold text-lg">
+                              {customer?.name || "Unknown Customer"}
+                            </h3>
                           </div>
                           <div className="text-sm text-muted-foreground space-y-1">
-                            <div>Check-in: {formatDateTime(visit.checkInTime)}</div>
+                            <div>
+                              Check-in: {formatDateTime(visit.checkInTime)}
+                            </div>
                             {visit.checkOutTime && (
-                              <div>Check-out: {formatDateTime(visit.checkOutTime)}</div>
+                              <div>
+                                Check-out: {formatDateTime(visit.checkOutTime)}
+                              </div>
                             )}
                             {visit.visitDuration && (
-                              <div>Duration: {formatDuration(visit.visitDuration)}</div>
+                              <div>
+                                Duration: {formatDuration(visit.visitDuration)}
+                              </div>
                             )}
                           </div>
                         </div>
-                        
+
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
