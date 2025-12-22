@@ -55,7 +55,7 @@ export function useOfflineStatus(): OfflineStatus {
 /**
  * Hook to check if specific feature is available offline
  */
-export function useOfflineFeature(feature: string): boolean {
+export function isFeatureAvailableOffline(feature: string): boolean {
   const offlineFeatures = [
     "visits.checkIn",
     "visits.checkOut",

@@ -19,7 +19,8 @@ interface OfflineIntegrationState {
  */
 export function useOfflineIntegration(feature: string) {
   const { isOnline } = useOfflineStatus();
-  const { pendingCount, isSyncing, sync } = useOfflineFeature();
+  const { pendingOperations, isSyncing, syncNow: sync } = useOfflineFeature();
+  const pendingCount = pendingOperations.length;
   const [state, setState] = useState<OfflineIntegrationState>({
     isOnline: true,
     hasPendingOperations: false,
@@ -45,7 +46,7 @@ export function useOfflineIntegration(feature: string) {
     const checkCachedData = async () => {
       const customers = await getCachedCustomers();
       const products = await getCachedProducts();
-      
+
       setState(prev => ({
         ...prev,
         cachedDataAvailable: !!(customers || products),
@@ -85,7 +86,7 @@ export function useOfflineIntegration(feature: string) {
     try {
       const customers = await getCachedCustomers();
       const products = await getCachedProducts();
-      
+
       return { customers, products };
     } catch (error) {
       console.error('Failed to get cached data:', error);
@@ -103,13 +104,13 @@ export function useOfflineIntegration(feature: string) {
     try {
       setState(prev => ({ ...prev, isSyncing: true }));
       await sync();
-      
+
       setState(prev => ({
         ...prev,
         isSyncing: false,
         lastSyncTime: new Date(),
       }));
-      
+
       toast.success('All pending operations synced successfully');
     } catch (error) {
       console.error('Failed to sync operations:', error);
@@ -163,7 +164,7 @@ export function useOfflineOperation(feature: string) {
         }
       } catch (error) {
         console.error(`Failed to execute ${operation} operation:`, error);
-        
+
         if (!isOnline) {
           // Queue operation on error if offline
           await queueOperation(operation, feature, data);
@@ -171,7 +172,7 @@ export function useOfflineOperation(feature: string) {
         } else {
           toast.error(`Failed to ${operation} ${feature}`);
         }
-        
+
         throw error;
       } finally {
         setIsLoading(false);

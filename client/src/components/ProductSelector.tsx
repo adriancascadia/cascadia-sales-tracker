@@ -19,10 +19,10 @@ import {
 interface Product {
   id: number;
   name: string;
-  sku?: string;
+  sku?: string | null;
   price: string;
-  description?: string;
-  distributorId?: number;
+  description?: string | null;
+  distributorId?: number | null;
 }
 
 interface Distributor {
@@ -100,7 +100,7 @@ export function ProductSelector({
             <CommandEmpty>No products found.</CommandEmpty>
             <CommandGroup>
               {filteredProducts?.map((product) => {
-                const distributorName = getDistributorName(product.distributorId);
+                const distributorName = getDistributorName(product.distributorId || undefined);
                 return (
                   <CommandItem
                     key={product.id}

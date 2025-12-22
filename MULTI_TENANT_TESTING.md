@@ -4,7 +4,7 @@ This guide explains how to test the multi-tenant architecture and verify that co
 
 ## Architecture Overview
 
-The Cascadia Sales Tracker uses a **database-level isolation** approach:
+The Cascadia Managing Brands Sales Tracker uses a **database-level isolation** approach:
 - Every table has a `companyId` column
 - All queries filter by `companyId` from the authenticated user's context
 - Email domain mapping automatically assigns users to companies

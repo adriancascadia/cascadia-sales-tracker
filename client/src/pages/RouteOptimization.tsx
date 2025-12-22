@@ -32,8 +32,8 @@ export default function RouteOptimization() {
   const routeLocations: RouteLocation[] = (customers || []).map((customer) => ({
     id: customer.id.toString(),
     name: customer.name,
-    latitude: customer.latitude || 0,
-    longitude: customer.longitude || 0,
+    latitude: typeof customer.latitude === 'string' ? parseFloat(customer.latitude) : (customer.latitude || 0),
+    longitude: typeof customer.longitude === 'string' ? parseFloat(customer.longitude) : (customer.longitude || 0),
     visitDuration: 30,
     priority: 3,
   }));
@@ -163,11 +163,10 @@ export default function RouteOptimization() {
               {optimizedRoutes.map((route, idx) => (
                 <Card
                   key={idx}
-                  className={`p-4 cursor-pointer transition-all ${
-                    selectedRoute === idx.toString()
+                  className={`p-4 cursor-pointer transition-all ${selectedRoute === idx.toString()
                       ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20'
                       : 'hover:shadow-lg'
-                  }`}
+                    }`}
                   onClick={() => setSelectedRoute(idx.toString())}
                 >
                   <div className="space-y-3">

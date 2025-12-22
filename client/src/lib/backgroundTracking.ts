@@ -2,6 +2,7 @@
  * Background Location Tracking Service
  * Handles continuous GPS tracking for field sales reps
  */
+import { Geolocation } from '@capacitor/geolocation';
 
 export interface LocationUpdate {
   latitude: number;
@@ -27,7 +28,7 @@ export interface GeofenceOptions {
 }
 
 class BackgroundTracker {
-  private watchId: number | null = null;
+  private watchId: string | null = null; // Capacitor watch returns a string ID
   private locations: LocationUpdate[] = [];
   private geofences: GeofenceOptions[] = [];
   private isTracking = false;
@@ -41,62 +42,68 @@ class BackgroundTracker {
     onUpdate: (location: LocationUpdate) => void,
     options?: TrackingOptions
   ): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error("Geolocation not supported"));
-        return;
-      }
-
+    return new Promise(async (resolve, reject) => {
       if (this.isTracking) {
         resolve();
         return;
       }
 
       this.updateCallback = onUpdate;
-      const geoOptions = {
-        enableHighAccuracy: options?.enableHighAccuracy ?? true,
-        timeout: options?.timeout ?? 30000,
-        maximumAge: options?.maximumAge ?? 0,
-      };
 
-      this.watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const location: LocationUpdate = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            timestamp: position.timestamp,
-            speed: position.coords.speed ?? undefined,
-            heading: position.coords.heading ?? undefined,
-          };
+      try {
+        const hasPermission = await this.checkAndRequestPermission();
+        if (!hasPermission) {
+          reject(new Error("Location permission not granted"));
+          return;
+        }
 
-          this.locations.push(location);
-          this.checkGeofences(location);
-          onUpdate(location);
-
-          // Keep only last 100 locations in memory
-          if (this.locations.length > 100) {
-            this.locations.shift();
+        this.watchId = await Geolocation.watchPosition({
+          enableHighAccuracy: options?.enableHighAccuracy ?? true,
+          timeout: options?.timeout ?? 30000,
+          maximumAge: options?.maximumAge ?? 0,
+        }, (position, err) => {
+          if (err) {
+            console.error("Geolocation error:", err);
+            // Don't reject the promise here as it's already resolved, but maybe notify listener?
+            return;
           }
-        },
-        (error) => {
-          console.error("Geolocation error:", error);
-          reject(error);
-        },
-        geoOptions
-      );
 
-      this.isTracking = true;
-      resolve();
+          if (position) {
+            const location: LocationUpdate = {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy,
+              timestamp: position.timestamp,
+              speed: position.coords.speed ?? undefined,
+              heading: position.coords.heading ?? undefined,
+            };
+
+            this.locations.push(location);
+            this.checkGeofences(location);
+            onUpdate(location);
+
+            // Keep only last 100 locations in memory
+            if (this.locations.length > 100) {
+              this.locations.shift();
+            }
+          }
+        });
+
+        this.isTracking = true;
+        resolve();
+      } catch (error) {
+        console.error("Error starting tracking:", error);
+        reject(error);
+      }
     });
   }
 
   /**
    * Stop background location tracking
    */
-  stopTracking(): void {
+  async stopTracking(): Promise<void> {
     if (this.watchId !== null) {
-      navigator.geolocation.clearWatch(this.watchId);
+      await Geolocation.clearWatch({ id: this.watchId });
       this.watchId = null;
     }
     this.isTracking = false;
@@ -105,29 +112,29 @@ class BackgroundTracker {
   /**
    * Get current location
    */
-  getCurrentLocation(): Promise<LocationUpdate> {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error("Geolocation not supported"));
-        return;
+  async getCurrentLocation(): Promise<LocationUpdate> {
+    try {
+      const hasPermission = await this.checkAndRequestPermission();
+      if (!hasPermission) {
+        throw new Error("Location permission denied");
       }
 
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          resolve({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            timestamp: position.timestamp,
-            speed: position.coords.speed ?? undefined,
-            heading: position.coords.heading ?? undefined,
-          });
-        },
-        (error) => {
-          reject(error);
-        }
-      );
-    });
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000
+      });
+
+      return {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        timestamp: position.timestamp,
+        speed: position.coords.speed ?? undefined,
+        heading: position.coords.heading ?? undefined,
+      };
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**
@@ -218,6 +225,20 @@ class BackgroundTracker {
   setGeofenceCallback(callback: (event: GeofenceEvent) => void): void {
     this.geofenceCallback = callback;
   }
+
+  private async checkAndRequestPermission(): Promise<boolean> {
+    try {
+      const status = await Geolocation.checkPermissions();
+      if (status.location === 'granted') {
+        return true;
+      }
+      const request = await Geolocation.requestPermissions();
+      return request.location === 'granted';
+    } catch (e) {
+      console.error("Error checking/requesting permissions", e);
+      return false;
+    }
+  }
 }
 
 export interface GeofenceEvent {
@@ -229,42 +250,24 @@ export interface GeofenceEvent {
 // Export singleton instance
 export const backgroundTracker = new BackgroundTracker();
 
-/**
- * Request location permission
- */
+// Re-export deprecated functions for backward compatibility (but implemented with Capacitor)
 export async function requestLocationPermission(): Promise<boolean> {
+  // Try to use the tracker instance logic or direct Capacitor call
   try {
-    if (!navigator.permissions) {
-      return true; // Assume granted if permissions API not available
-    }
-
-    const result = await navigator.permissions.query({
-      name: "geolocation",
-    });
-
-    return result.state === "granted" || result.state === "prompt";
-  } catch (error) {
-    console.error("Permission query error:", error);
+    const status = await Geolocation.requestPermissions();
+    return status.location === 'granted';
+  } catch (e) {
+    console.error("Error requesting permissions", e);
     return false;
   }
 }
 
-/**
- * Check if location permission is granted
- */
 export async function isLocationPermissionGranted(): Promise<boolean> {
   try {
-    if (!navigator.permissions) {
-      return true;
-    }
-
-    const result = await navigator.permissions.query({
-      name: "geolocation",
-    });
-
-    return result.state === "granted";
-  } catch (error) {
-    console.error("Permission check error:", error);
+    const status = await Geolocation.checkPermissions();
+    return status.location === 'granted';
+  } catch (e) {
+    console.error("Error checking permissions", e);
     return false;
   }
 }

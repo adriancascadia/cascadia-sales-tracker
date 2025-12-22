@@ -50,7 +50,7 @@ class OAuthService {
     state: string
   ): Promise<ExchangeTokenResponse> {
     const payload: ExchangeTokenRequest = {
-      clientId: ENV.appId,
+      clientId: ENV.appId!,
       grantType: "authorization_code",
       code,
       redirectUri: this.decodeState(state),
@@ -173,7 +173,7 @@ class SDKServer {
     return this.signSession(
       {
         openId,
-        appId: ENV.appId,
+        appId: ENV.appId!,
         name: options.name || "",
       },
       options
@@ -239,7 +239,7 @@ class SDKServer {
   ): Promise<GetUserInfoWithJwtResponse> {
     const payload: GetUserInfoWithJwtRequest = {
       jwtToken,
-      projectId: ENV.appId,
+      projectId: ENV.appId!,
     };
 
     const { data } = await this.client.post<GetUserInfoWithJwtResponse>(
@@ -262,17 +262,17 @@ class SDKServer {
     // Intenta obtener el token del header Authorization primero
     const authHeader = req.headers.authorization;
     let token: string | null = null;
-    
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7); // Quita "Bearer "
     }
-    
+
     // Si no hay token en el header, intenta obtenerlo de las cookies
     if (!token) {
       const cookies = this.parseCookies(req.headers.cookie);
       token = cookies.get(COOKIE_NAME) || null;
     }
-    
+
     if (!token) {
       throw ForbiddenError("No authentication token provided");
     }
@@ -283,27 +283,27 @@ class SDKServer {
       const { payload } = await jwtVerify(token, secretKey, {
         algorithms: ["HS256"],
       });
-      
+
       const userId = (payload as any).userId;
       const email = (payload as any).email;
-      
+
       if (!userId) {
         throw ForbiddenError("Invalid token payload");
       }
-      
+
       // Obtén el usuario de la base de datos
       const user = await db.getUserByEmail(email);
       if (!user) {
         throw ForbiddenError("User not found");
       }
-      
+
       // Actualiza lastSignedIn
       await db.upsertUser({
         openId: user.openId,
         companyId: user.companyId,
         lastSignedIn: new Date(),
       });
-      
+
       return user;
     } catch (error) {
       logger.error("[Auth] Token verification failed:", { error });

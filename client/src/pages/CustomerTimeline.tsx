@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { Users, MapPin, Package, Image, FileText, Clock, Phone, Mail, MapPinIcon, TrendingUp, Plus } from "lucide-react";
+import { Package, Image, Clock, Phone, Mail, MapPinIcon, Plus } from "lucide-react";
 import { Link } from "wouter";
 
 interface TimelineEvent {
@@ -36,15 +36,15 @@ export default function CustomerTimeline() {
   const customerId = parseInt(params.get("customerId") || "0");
 
   // Fetch data
-  const { data: customer } = trpc.customers.getById.useQuery(customerId, {
+  const { data: customer } = trpc.customers.getById.useQuery({ id: customerId }, {
     enabled: customerId > 0,
   });
 
-  const { data: visits = [] } = trpc.visits.getByCustomerId.useQuery(customerId, {
+  const { data: visits = [] } = trpc.visitData.getByCustomer.useQuery({ customerId }, {
     enabled: customerId > 0,
   });
 
-  const { data: orders = [] } = trpc.orders.list.useQuery(undefined, {
+  const { data: orders = [] } = trpc.orders.getByCustomer.useQuery({ customerId }, {
     enabled: customerId > 0,
   });
 
@@ -175,12 +175,7 @@ export default function CustomerTimeline() {
 
   if (!customer) {
     return (
-      <DashboardLayout
-        navItems={[
-          { href: "/", label: "Dashboard", icon: TrendingUp },
-          { href: "/customers", label: "Customers", icon: Users },
-        ]}
-      >
+      <DashboardLayout>
         <div className="text-center py-12">
           <p className="text-muted-foreground">Customer not found</p>
           <Link href="/customers">
@@ -192,12 +187,7 @@ export default function CustomerTimeline() {
   }
 
   return (
-    <DashboardLayout
-      navItems={[
-        { href: "/", label: "Dashboard", icon: TrendingUp },
-        { href: "/customers", label: "Customers", icon: Users },
-      ]}
-    >
+    <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-start justify-between">

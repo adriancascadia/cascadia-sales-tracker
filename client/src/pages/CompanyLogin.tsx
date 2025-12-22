@@ -13,7 +13,7 @@ export default function CompanyLogin() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"email" | "password">("email");
-  const [companyInfo, setCompanyInfo] = useState<{ name: string; logo?: string } | null>(null);
+  const [companyInfo, setCompanyInfo] = useState<{ id: number; name: string; logo: string | null } | null>(null);
 
   // Get company by email domain
   const getCompanyQuery = trpc.auth.getCompanyByEmail.useQuery(

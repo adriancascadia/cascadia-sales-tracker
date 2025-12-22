@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Users, MapPin, Package, FileText, TrendingUp, Clock, Camera, Upload, Image as ImageIcon } from "lucide-react";
+import { Camera, Upload, Image as ImageIcon } from "lucide-react";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -20,11 +20,11 @@ export default function Photos() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  
+
   const utils = trpc.useUtils();
-  const { data: photos, isLoading } = trpc.photos.getByVisit.useQuery({ visitId: selectedVisitId ? parseInt(selectedVisitId) : 0 }, { enabled: false });
-  const { data: visits } = trpc.visits.list.useQuery();
-  
+  const { data: photos, isLoading } = trpc.photos.list.useQuery();
+  const { data: visits } = trpc.visitData.list.useQuery();
+
   const uploadMutation = trpc.photos.upload.useMutation({
     onSuccess: () => {
       utils.photos.getByVisit.invalidate();
@@ -38,7 +38,7 @@ export default function Photos() {
       toast.error("Failed to upload photo: " + error.message);
     },
   });
-  
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -54,26 +54,26 @@ export default function Photos() {
       reader.readAsDataURL(file);
     }
   };
-  
+
   const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedFile) {
       toast.error("Please select a photo");
       return;
     }
-    
+
     const formData = new FormData(e.currentTarget);
     const photoType = formData.get("photoType") as string;
     const caption = formData.get("caption") as string;
-    
+
     setIsUploading(true);
-    
+
     try {
       // Convert file to base64
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64 = reader.result as string;
-        
+
         uploadMutation.mutate({
           visitId: selectedVisitId ? parseInt(selectedVisitId) : undefined,
           photoType: photoType as any,
@@ -88,11 +88,11 @@ export default function Photos() {
       setIsUploading(false);
     }
   };
-  
+
   const formatDate = (dateString: string | Date) => {
     return new Date(dateString).toLocaleDateString();
   };
-  
+
   const getPhotoTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       before: "Before",
@@ -106,26 +106,14 @@ export default function Photos() {
   };
 
   return (
-    <DashboardLayout
-      navItems={[
-        { href: "/", label: "Dashboard", icon: TrendingUp },
-        { href: "/customers", label: "Customers", icon: Users },
-        { href: "/routes", label: "Routes", icon: MapPin },
-        { href: "/visits", label: "Visits", icon: Clock },
-        { href: "/orders", label: "Orders", icon: Package },
-        { href: "/products", label: "Products", icon: Package },
-        { href: "/photos", label: "Photos", icon: Camera },
-        { href: "/tracking", label: "Live Tracking", icon: MapPin },
-        { href: "/reports", label: "Reports", icon: FileText },
-      ]}
-    >
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Photos</h1>
             <p className="text-muted-foreground">Document visits with before/after photos</p>
           </div>
-          
+
           <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -149,7 +137,7 @@ export default function Photos() {
                         <SelectValue placeholder="Select visit" />
                       </SelectTrigger>
                       <SelectContent>
-                        {visits?.map((visit) => (
+                        {visits?.map((visit: any) => (
                           <SelectItem key={visit.id} value={visit.id.toString()}>
                             Visit #{visit.id} - {formatDate(visit.checkInTime)}
                           </SelectItem>
@@ -157,7 +145,7 @@ export default function Photos() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="grid gap-2">
                     <Label>Photo Type *</Label>
                     <Select name="photoType" required>
@@ -174,12 +162,12 @@ export default function Photos() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="grid gap-2">
                     <Label>Caption</Label>
                     <Textarea name="caption" rows={2} placeholder="Add a description..." />
                   </div>
-                  
+
                   <div className="grid gap-2">
                     <Label>Photo</Label>
                     <div className="flex gap-2">
@@ -218,7 +206,7 @@ export default function Photos() {
                       className="hidden"
                     />
                   </div>
-                  
+
                   {previewUrl && (
                     <div className="grid gap-2">
                       <Label>Preview</Label>
@@ -250,7 +238,7 @@ export default function Photos() {
             </DialogContent>
           </Dialog>
         </div>
-        
+
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (

@@ -26,13 +26,13 @@ const customerRouter = router({
     }
     return await db.getCustomersByUserId(ctx.user.id);
   }),
-  
+
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return await db.getCustomerById(input.id);
     }),
-  
+
   create: protectedProcedure
     .input(z.object({
       name: z.string(),
@@ -54,7 +54,7 @@ const customerRouter = router({
       });
       return { success: true };
     }),
-  
+
   update: protectedProcedure
     .input(z.object({
       id: z.number(),
@@ -74,14 +74,14 @@ const customerRouter = router({
       await db.updateCustomer(id, data);
       return { success: true };
     }),
-  
+
   delete: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await db.deleteCustomer(input.id);
       return { success: true };
     }),
-  
+
   bulkImport: protectedProcedure
     .input(z.object({
       customers: z.array(z.object({
@@ -98,7 +98,7 @@ const customerRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const results = { success: 0, failed: 0, errors: [] as string[] };
-      
+
       for (const customer of input.customers) {
         try {
           await db.createCustomer({
@@ -112,7 +112,7 @@ const customerRouter = router({
           results.errors.push(`Failed to import ${customer.name}: ${error}`);
         }
       }
-      
+
       return results;
     }),
 });
@@ -123,19 +123,19 @@ const routeRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     return await db.getRoutesByUserId(ctx.user.id);
   }),
-  
+
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return await db.getRouteById(input.id);
     }),
-  
+
   getByDate: protectedProcedure
     .input(z.object({ date: z.string() }))
     .query(async ({ ctx, input }) => {
       return await db.getRoutesByDate(ctx.user.id, input.date);
     }),
-  
+
   getTodayByUser: protectedProcedure
     .input(z.object({ userId: z.number() }))
     .query(async ({ input }) => {
@@ -143,7 +143,7 @@ const routeRouter = router({
       const routes = await db.getRoutesByDate(input.userId, today);
       return routes.length > 0 ? routes[0] : null;
     }),
-  
+
   create: protectedProcedure
     .input(z.object({
       routeName: z.string(),
@@ -159,7 +159,7 @@ const routeRouter = router({
       });
       return { success: true };
     }),
-  
+
   update: protectedProcedure
     .input(z.object({
       id: z.number(),
@@ -176,21 +176,21 @@ const routeRouter = router({
       await db.updateRoute(id, updateData);
       return { success: true };
     }),
-  
+
   delete: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await db.deleteRoute(input.id);
       return { success: true };
     }),
-  
+
   // Route stops
   getStops: protectedProcedure
     .input(z.object({ routeId: z.number() }))
     .query(async ({ input }) => {
       return await db.getRouteStopsByRouteId(input.routeId);
     }),
-  
+
   addStop: protectedProcedure
     .input(z.object({
       routeId: z.number(),
@@ -206,7 +206,7 @@ const routeRouter = router({
       });
       return { success: true };
     }),
-  
+
   updateStop: protectedProcedure
     .input(z.object({
       id: z.number(),
@@ -222,20 +222,20 @@ const routeRouter = router({
       await db.updateRouteStop(id, updateData);
       return { success: true };
     }),
-  
+
   deleteStop: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await db.deleteRouteStop(input.id);
       return { success: true };
     }),
-  
+
   getWithStops: protectedProcedure
     .input(z.object({ routeId: z.number() }))
     .query(async ({ input }) => {
       return await db.getRouteWithStops(input.routeId);
     }),
-  
+
   autoAssignCustomers: protectedProcedure
     .input(z.object({
       routeId: z.number(),
@@ -245,17 +245,33 @@ const routeRouter = router({
       const route = await db.getRouteById(input.routeId);
       if (!route) throw new Error("Route not found");
       if (route.userId !== ctx.user.id) throw new Error("Unauthorized");
-      
+
       const customers = await db.getCustomersByUserId(ctx.user.id);
       const customerIds = customers
         .filter(c => c.latitude && c.longitude)
         .map(c => c.id);
-      
+
       if (customerIds.length === 0) {
         throw new Error("No customers with location data available");
       }
-      
+
       return await db.assignCustomersToRoute(input.routeId, customerIds);
+    }),
+
+  reorderStops: protectedProcedure
+    .input(z.object({
+      routeId: z.number(),
+      stops: z.array(z.object({
+        id: z.number(),
+        stopOrder: z.number(),
+      })),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const route = await db.getRouteById(input.routeId);
+      if (!route) throw new Error("Route not found");
+      if (route.userId !== ctx.user.id) throw new Error("Unauthorized");
+
+      return await db.reorderRouteStops(input.stops);
     }),
 });
 
@@ -265,23 +281,27 @@ const visitRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     return await db.getVisitsByUserId(ctx.user.id);
   }),
-  
+
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return await db.getVisitById(input.id);
     }),
-  
+
   getByCustomer: protectedProcedure
     .input(z.object({ customerId: z.number() }))
     .query(async ({ input }) => {
       return await db.getVisitsByCustomerId(input.customerId);
     }),
-  
+
   getActive: protectedProcedure.query(async ({ ctx }) => {
     return await db.getActiveVisitByUserId(ctx.user.id);
   }),
-  
+
+  getAllActive: protectedProcedure.query(async ({ ctx }) => {
+    return await db.getAllActiveVisits(ctx.user.companyId);
+  }),
+
   checkIn: protectedProcedure
     .input(z.object({
       customerId: z.number(),
@@ -291,6 +311,7 @@ const visitRouter = router({
       visitType: z.enum(["scheduled", "unscheduled"]).default("scheduled"),
     }))
     .mutation(async ({ ctx, input }) => {
+      // Create the visit
       await db.createVisit({
         companyId: ctx.user.companyId,
         userId: ctx.user.id,
@@ -302,9 +323,22 @@ const visitRouter = router({
         visitType: input.visitType,
         status: "in_progress",
       });
+
+      // Also log a GPS track so the user immediately appears on the map
+      await db.createGpsTrack({
+        companyId: ctx.user.companyId,
+        userId: ctx.user.id,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        timestamp: new Date(),
+        accuracy: 0, // Manual check-in assumed high accuracy/explicit
+        speed: "0",
+        heading: "0",
+      });
+
       return { success: true };
     }),
-  
+
   checkOut: protectedProcedure
     .input(z.object({
       visitId: z.number(),
@@ -316,11 +350,11 @@ const visitRouter = router({
       if (!visit) {
         throw new Error("Visit not found");
       }
-      
+
       const checkOutTime = new Date();
       const checkInTime = new Date(visit.checkInTime);
       const durationMinutes = Math.floor((checkOutTime.getTime() - checkInTime.getTime()) / 60000);
-      
+
       await db.updateVisit(input.visitId, {
         checkOutTime: checkOutTime,
         checkOutLatitude: input.latitude,
@@ -328,17 +362,17 @@ const visitRouter = router({
         visitDuration: durationMinutes,
         status: "completed",
       });
-      
+
       return { success: true, duration: durationMinutes };
     }),
-  
+
   // Visit activities
   getActivities: protectedProcedure
     .input(z.object({ visitId: z.number() }))
     .query(async ({ input }) => {
       return await db.getVisitActivitiesByVisitId(input.visitId);
     }),
-  
+
   addActivity: protectedProcedure
     .input(z.object({
       visitId: z.number(),
@@ -359,13 +393,13 @@ const productRouter = router({
   list: protectedProcedure.query(async () => {
     return await db.getAllProducts();
   }),
-  
+
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return await db.getProductById(input.id);
     }),
-  
+
   create: protectedProcedure
     .input(z.object({
       sku: z.string(),
@@ -382,7 +416,7 @@ const productRouter = router({
       });
       return { success: true };
     }),
-  
+
   update: protectedProcedure
     .input(z.object({
       id: z.number(),
@@ -407,19 +441,19 @@ const orderRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     return await db.getOrdersByUserId(ctx.user.id);
   }),
-  
+
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return await db.getOrderById(input.id);
     }),
-  
+
   getByCustomer: protectedProcedure
     .input(z.object({ customerId: z.number() }))
     .query(async ({ input }) => {
       return await db.getOrdersByCustomerId(input.customerId);
     }),
-  
+
   create: protectedProcedure
     .input(z.object({
       visitId: z.number().optional(),
@@ -439,7 +473,7 @@ const orderRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const { items, ...orderData } = input;
-      
+
       const result = await db.createOrder({
         ...orderData,
         companyId: ctx.user.companyId,
@@ -447,16 +481,16 @@ const orderRouter = router({
         orderDate: new Date(),
         status: "pending",
       });
-      
+
       const orderId = Number(result[0].insertId);
-      
+
       for (const item of items) {
         await db.createOrderItem({
           orderId,
           ...item,
         });
       }
-      
+
       // Automatically determine distributor from products and send email
       const firstItem = items[0];
       if (firstItem) {
@@ -464,7 +498,7 @@ const orderRouter = router({
         if (product?.distributorId) {
           // Update order with distributor
           await db.updateOrder(orderId, { distributorId: product.distributorId });
-          
+
           // Send emails to all distributors (automatically splits if multiple)
           try {
             const sentDistributors = await sendOrderEmailsMultiDistributor(orderId);
@@ -478,7 +512,7 @@ const orderRouter = router({
           }
         }
       }
-      
+
       // Send notification to managers if internal notes were added
       if (input.internalNotes && input.internalNotes.trim()) {
         try {
@@ -492,28 +526,28 @@ const orderRouter = router({
           console.error(`❌ Failed to send notification for order #${input.orderNumber}:`, error);
         }
       }
-      
+
       return { success: true, orderId };
     }),
-  
-    generateInvoice: protectedProcedure
-      .input(z.object({ orderId: z.number() }))
-      .mutation(async ({ input }) => {
-        try {
-          const pdfBuffer = await generateInvoicePDF(input.orderId);
-          return {
-            success: true,
-            pdf: pdfBuffer.toString('base64'),
-          };
-        } catch (error) {
-          console.error("Failed to generate invoice:", error);
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to generate invoice PDF",
-          });
-        }
-      }),
-    submitOrder: protectedProcedure
+
+  generateInvoice: protectedProcedure
+    .input(z.object({ orderId: z.number() }))
+    .mutation(async ({ input }) => {
+      try {
+        const pdfBuffer = await generateInvoicePDF(input.orderId);
+        return {
+          success: true,
+          pdf: pdfBuffer.toString('base64'),
+        };
+      } catch (error) {
+        console.error("Failed to generate invoice:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to generate invoice PDF",
+        });
+      }
+    }),
+  submitOrder: protectedProcedure
     .input(z.object({
       orderId: z.number(),
       distributorId: z.number().optional(),
@@ -525,7 +559,7 @@ const orderRouter = router({
       });
       return { success: true };
     }),
-  
+
   getItems: protectedProcedure
     .input(z.object({ orderId: z.number() }))
     .query(async ({ input }) => {
@@ -539,19 +573,19 @@ const photoRouter = router({
   list: protectedProcedure.query(async () => {
     return await db.getAllPhotos();
   }),
-  
+
   getByVisit: protectedProcedure
     .input(z.object({ visitId: z.number() }))
     .query(async ({ input }) => {
       return await db.getPhotosByVisitId(input.visitId);
     }),
-  
+
   getByCustomer: protectedProcedure
     .input(z.object({ customerId: z.number() }))
     .query(async ({ input }) => {
       return await db.getPhotosByCustomerId(input.customerId);
     }),
-  
+
   upload: protectedProcedure
     .input(z.object({
       visitId: z.number().optional(),
@@ -565,19 +599,19 @@ const photoRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const { imageData, mimeType, ...photoData } = input;
-      
+
       // Decode base64 image
       const buffer = Buffer.from(imageData, 'base64');
-      
+
       // Generate unique file key
       const timestamp = Date.now();
       const randomSuffix = Math.random().toString(36).substring(7);
       const extension = mimeType.split('/')[1];
       const fileKey = `photos/${ctx.user.id}/${timestamp}-${randomSuffix}.${extension}`;
-      
+
       // Upload to S3
       const { url } = await storagePut(fileKey, buffer, mimeType);
-      
+
       // Save to database
       await db.createPhoto({
         ...photoData,
@@ -587,7 +621,7 @@ const photoRouter = router({
         url,
         takenAt: new Date(),
       });
-      
+
       return { success: true, url };
     }),
 });
@@ -612,15 +646,15 @@ const gpsRouter = router({
       });
       return { success: true };
     }),
-  
+
   getLatest: protectedProcedure.query(async ({ ctx }) => {
     return await db.getLatestGpsTrackByUserId(ctx.user.id);
   }),
-  
-  getAllActive: protectedProcedure.query(async () => {
-    return await db.getAllActiveGpsTracks();
+
+  getAllActive: protectedProcedure.query(async ({ ctx }) => {
+    return await db.getAllActiveGpsTracks(ctx.user.companyId);
   }),
-  
+
   getHistory: protectedProcedure
     .input(z.object({
       userId: z.number().optional(),
@@ -643,11 +677,11 @@ const mileageRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     return await db.getMileageLogsByUserId(ctx.user.id);
   }),
-  
+
   getActive: protectedProcedure.query(async ({ ctx }) => {
     return await db.getActiveMileageLogByUserId(ctx.user.id);
   }),
-  
+
   start: protectedProcedure
     .input(z.object({
       routeId: z.number().optional(),
@@ -663,7 +697,7 @@ const mileageRouter = router({
       });
       return { success: true };
     }),
-  
+
   end: protectedProcedure
     .input(z.object({
       logId: z.number(),
@@ -679,14 +713,14 @@ const mileageRouter = router({
       });
       return { success: true };
     }),
-  
+
   getAllLogs: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") {
       throw new Error("Unauthorized: Only admins can view all mileage logs");
     }
     return await db.getAllMileageLogs();
   }),
-  
+
   delete: protectedProcedure
     .input(z.object({ logId: z.number() }))
     .mutation(async ({ input }) => {
@@ -702,13 +736,13 @@ const analyticsRouter = router({
     const visits = await db.getVisitsByUserId(ctx.user.id);
     const orders = await db.getOrdersByUserId(ctx.user.id);
     const customers = await db.getCustomersByUserId(ctx.user.id);
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const todayVisits = visits.filter(v => new Date(v.checkInTime) >= today);
     const completedVisits = visits.filter(v => v.status === "completed");
-    
+
     return {
       totalCustomers: customers.length,
       totalVisits: visits.length,
@@ -718,7 +752,7 @@ const analyticsRouter = router({
       pendingOrders: orders.filter(o => o.status === "pending").length,
     };
   }),
-  
+
   getAllUsers: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") {
       throw new Error("Unauthorized");
@@ -735,13 +769,13 @@ const distributorsRouter = router({
   list: protectedProcedure.query(async () => {
     return await db.getAllDistributors();
   }),
-  
+
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return await db.getDistributorById(input.id);
     }),
-  
+
   create: protectedProcedure
     .input(z.object({
       name: z.string(),
@@ -761,7 +795,7 @@ const distributorsRouter = router({
       });
       return { success: true, id };
     }),
-  
+
   update: protectedProcedure
     .input(z.object({
       id: z.number(),
@@ -781,7 +815,7 @@ const distributorsRouter = router({
       await db.updateDistributor(id, data);
       return { success: true };
     }),
-  
+
   delete: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
@@ -795,7 +829,7 @@ export const appRouter = router({
   aiCoach: aiCoachRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
-    
+
     getCompanyByEmail: publicProcedure
       .input(z.object({ email: z.string().email() }))
       .query(async ({ input }) => {
@@ -819,23 +853,23 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const user = await db.loginUser(input.email, input.password);
-        
+
         if (!user) {
           throw new TRPCError({
             code: "UNAUTHORIZED",
             message: "Invalid email or password",
           });
         }
-        
+
         const { SignJWT } = await import("jose");
         const token = await new SignJWT({ userId: user.id, email: user.email })
           .setProtectedHeader({ alg: 'HS256' })
           .setExpirationTime('7d')
           .sign(new TextEncoder().encode(process.env.JWT_SECRET || 'secret'));
-        
+
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, cookieOptions);
-        
+
         return {
           success: true,
           user,
@@ -858,7 +892,7 @@ export const appRouter = router({
             message: "Email already registered",
           });
         }
-        
+
         const result = await db.createLocalUser({
           companyId: input.companyId,
           name: input.name,
@@ -866,7 +900,7 @@ export const appRouter = router({
           password: input.password,
           role: "user",
         });
-        
+
         return {
           success: true,
           message: "User registered successfully",
@@ -881,7 +915,7 @@ export const appRouter = router({
       } as const;
     }),
   }),
-  
+
   customers: customerRouter,
   routes: routeRouter,
   visitData: visitRouter,
@@ -900,26 +934,26 @@ export const appRouter = router({
     list: protectedProcedure.query(async () => {
       return await db.getAllAlerts();
     }),
-    
+
     unread: protectedProcedure.query(async () => {
       return await db.getUnreadAlerts();
     }),
-    
+
     markAsRead: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         await db.markAlertAsRead(input.id);
         return { success: true };
       }),
-    
+
     markAllAsRead: protectedProcedure
       .mutation(async () => {
         await db.markAllAlertsAsRead();
         return { success: true };
       }),
-    
+
     addNotes: protectedProcedure
-      .input(z.object({ 
+      .input(z.object({
         id: z.number(),
         notes: z.string(),
       }))
@@ -927,7 +961,7 @@ export const appRouter = router({
         await db.updateAlertNotes(input.id, input.notes);
         return { success: true };
       }),
-    
+
     getMyAlerts: protectedProcedure
       .query(async ({ ctx }) => {
         const allAlerts = await db.getAllAlerts();

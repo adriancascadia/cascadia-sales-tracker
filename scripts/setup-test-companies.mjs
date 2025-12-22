@@ -22,13 +22,13 @@ const pool = mysql.createPool({
 const testCompanies = [
   {
     id: 1,
-    name: "Cascadia",
+    name: "Cascadia Managing Brands",
     domain: "cascadiafoodbev.com",
     logoUrl: "/cascadia-logo.png",
   },
   {
     id: 2,
-    name: "Tech Corp",
+    name: " Tech Corp",
     domain: "techcorp.com",
     logoUrl: "/techcorp-logo.png",
   },

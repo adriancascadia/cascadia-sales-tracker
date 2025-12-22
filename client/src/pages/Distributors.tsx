@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { Users, MapPin, Package, FileText, TrendingUp, Clock, Plus, Search, Edit, Trash2, Phone, Mail, MapPinIcon, Bell, Truck } from "lucide-react";
+import { Users, Plus, Search, Edit, Trash2, Phone, Mail, MapPinIcon, Truck } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -15,10 +15,10 @@ export default function Distributors() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingDistributor, setEditingDistributor] = useState<any>(null);
-  
+
   const utils = trpc.useUtils();
   const { data: distributors, isLoading } = trpc.distributors.list.useQuery();
-  
+
   const createMutation = trpc.distributors.create.useMutation({
     onSuccess: () => {
       utils.distributors.list.invalidate();
@@ -29,7 +29,7 @@ export default function Distributors() {
       toast.error("Failed to create distributor: " + error.message);
     },
   });
-  
+
   const updateMutation = trpc.distributors.update.useMutation({
     onSuccess: () => {
       utils.distributors.list.invalidate();
@@ -40,7 +40,7 @@ export default function Distributors() {
       toast.error("Failed to update distributor: " + error.message);
     },
   });
-  
+
   const deleteMutation = trpc.distributors.delete.useMutation({
     onSuccess: () => {
       utils.distributors.list.invalidate();
@@ -50,7 +50,7 @@ export default function Distributors() {
       toast.error("Failed to delete distributor: " + error.message);
     },
   });
-  
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -65,14 +65,14 @@ export default function Distributors() {
       zipCode: formData.get("zipCode") as string,
       notes: formData.get("notes") as string,
     };
-    
+
     if (editingDistributor) {
       updateMutation.mutate({ id: editingDistributor.id, ...data });
     } else {
       createMutation.mutate(data);
     }
   };
-  
+
   const filteredDistributors = distributors?.filter(dist =>
     dist.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     dist.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -80,27 +80,14 @@ export default function Distributors() {
   );
 
   return (
-    <DashboardLayout
-      navItems={[
-        { href: "/", label: "Dashboard", icon: TrendingUp },
-        { href: "/customers", label: "Customers", icon: Users },
-        { href: "/routes", label: "Routes", icon: MapPin },
-        { href: "/visits", label: "Visits", icon: Clock },
-        { href: "/orders", label: "Orders", icon: Package },
-        { href: "/products", label: "Products", icon: Package },
-        { href: "/distributors", label: "Distributors", icon: Truck },
-        { href: "/tracking", label: "Live Tracking", icon: MapPin },
-        { href: "/alerts", label: "Alerts", icon: Bell },
-        { href: "/reports", label: "Reports", icon: FileText },
-      ]}
-    >
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Distributors</h1>
             <p className="text-muted-foreground">Manage distributor companies and contacts</p>
           </div>
-          
+
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -121,12 +108,12 @@ export default function Distributors() {
                     <Label htmlFor="name">Company Name *</Label>
                     <Input id="name" name="name" required />
                   </div>
-                  
+
                   <div className="grid gap-2">
                     <Label htmlFor="contactPerson">Contact Person</Label>
                     <Input id="contactPerson" name="contactPerson" />
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="email">Email *</Label>
@@ -138,12 +125,12 @@ export default function Distributors() {
                       <Input id="phone" name="phone" type="tel" />
                     </div>
                   </div>
-                  
+
                   <div className="grid gap-2">
                     <Label htmlFor="address">Address</Label>
                     <Input id="address" name="address" />
                   </div>
-                  
+
                   <div className="grid grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="city">City</Label>
@@ -158,7 +145,7 @@ export default function Distributors() {
                       <Input id="zipCode" name="zipCode" />
                     </div>
                   </div>
-                  
+
                   <div className="grid gap-2">
                     <Label htmlFor="notes">Notes</Label>
                     <Textarea id="notes" name="notes" rows={3} />
@@ -176,7 +163,7 @@ export default function Distributors() {
             </DialogContent>
           </Dialog>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -188,7 +175,7 @@ export default function Distributors() {
             />
           </div>
         </div>
-        
+
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
@@ -247,12 +234,12 @@ export default function Distributors() {
                                 <Label htmlFor="edit-name">Company Name *</Label>
                                 <Input id="edit-name" name="name" defaultValue={distributor.name} required />
                               </div>
-                              
+
                               <div className="grid gap-2">
                                 <Label htmlFor="edit-contactPerson">Contact Person</Label>
                                 <Input id="edit-contactPerson" name="contactPerson" defaultValue={distributor.contactPerson || ""} />
                               </div>
-                              
+
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">
                                   <Label htmlFor="edit-email">Email *</Label>
@@ -263,12 +250,12 @@ export default function Distributors() {
                                   <Input id="edit-phone" name="phone" type="tel" defaultValue={distributor.phone || ""} />
                                 </div>
                               </div>
-                              
+
                               <div className="grid gap-2">
                                 <Label htmlFor="edit-address">Address</Label>
                                 <Input id="edit-address" name="address" defaultValue={distributor.address || ""} />
                               </div>
-                              
+
                               <div className="grid grid-cols-3 gap-4">
                                 <div className="grid gap-2">
                                   <Label htmlFor="edit-city">City</Label>
@@ -283,7 +270,7 @@ export default function Distributors() {
                                   <Input id="edit-zipCode" name="zipCode" defaultValue={distributor.zipCode || ""} />
                                 </div>
                               </div>
-                              
+
                               <div className="grid gap-2">
                                 <Label htmlFor="edit-notes">Notes</Label>
                                 <Textarea id="edit-notes" name="notes" rows={3} defaultValue={distributor.notes || ""} />
@@ -300,7 +287,7 @@ export default function Distributors() {
                           </form>
                         </DialogContent>
                       </Dialog>
-                      
+
                       <Button
                         variant="ghost"
                         size="icon"

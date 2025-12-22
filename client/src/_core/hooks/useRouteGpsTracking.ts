@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 
 interface RepLocation {
   userId: number;
+  userName?: string;
   latitude: number;
   longitude: number;
   speed?: number;
@@ -30,6 +31,7 @@ export function useRouteGpsTracking(routeId: number, pollInterval: number = 5000
       setRepLocations(
         gpsData.repLocations.map(rep => ({
           ...rep,
+          status: rep.status as "active" | "idle" | "offline",
           userName: `Rep ${rep.userId}`, // In a real app, fetch the user name
         }))
       );

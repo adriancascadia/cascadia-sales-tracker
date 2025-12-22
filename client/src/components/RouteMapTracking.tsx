@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 
 interface RepLocation {
   userId: number;
-  userName: string;
+  userName?: string;
   latitude: number;
   longitude: number;
   speed?: number;
@@ -27,9 +27,9 @@ interface RouteStop {
   customer?: {
     id: number;
     name: string;
-    latitude?: string;
-    longitude?: string;
-  };
+    latitude?: string | null;
+    longitude?: string | null;
+  } | null;
 }
 
 interface RouteMapTrackingProps {
@@ -38,6 +38,7 @@ interface RouteMapTrackingProps {
   repLocations: RepLocation[];
   isLoading?: boolean;
   onRefresh?: () => void;
+  onSaveOptimizedOrder?: (orderedStopIds: number[]) => Promise<void>;
 }
 
 export default function RouteMapTracking({
@@ -46,6 +47,7 @@ export default function RouteMapTracking({
   repLocations,
   isLoading = false,
   onRefresh,
+  onSaveOptimizedOrder,
 }: RouteMapTrackingProps) {
   const [selectedRep, setSelectedRep] = useState<RepLocation | null>(
     repLocations[0] || null
@@ -85,9 +87,9 @@ export default function RouteMapTracking({
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
@@ -138,18 +140,18 @@ export default function RouteMapTracking({
   // Calculate route metrics
   const totalDistance = routePath.length > 1
     ? routePath.reduce((sum, point, idx) => {
-        if (idx === 0) return 0;
-        const prev = routePath[idx - 1];
-        const dLat = ((point.lat - prev.lat) * Math.PI) / 180;
-        const dLng = ((point.lng - prev.lng) * Math.PI) / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos((prev.lat * Math.PI) / 180) *
-          Math.cos((point.lat * Math.PI) / 180) *
-          Math.sin(dLng / 2) *
-          Math.sin(dLng / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return sum + 6371 * c;
-      }, 0)
+      if (idx === 0) return 0;
+      const prev = routePath[idx - 1];
+      const dLat = ((point.lat - prev.lat) * Math.PI) / 180;
+      const dLng = ((point.lng - prev.lng) * Math.PI) / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((prev.lat * Math.PI) / 180) *
+        Math.cos((point.lat * Math.PI) / 180) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return sum + 6371 * c;
+    }, 0)
     : 0;
 
   // Estimate total duration (1 hour per 50km + 15 min per stop)
@@ -177,13 +179,12 @@ export default function RouteMapTracking({
             {alerts.slice(0, 3).map(alert => (
               <Alert
                 key={alert.id}
-                className={`${
-                  alert.severity === "critical"
-                    ? "border-red-200 bg-red-50"
-                    : alert.severity === "warning"
-                      ? "border-yellow-200 bg-yellow-50"
-                      : "border-green-200 bg-green-50"
-                }`}
+                className={`${alert.severity === "critical"
+                  ? "border-red-200 bg-red-50"
+                  : alert.severity === "warning"
+                    ? "border-yellow-200 bg-yellow-50"
+                    : "border-green-200 bg-green-50"
+                  }`}
               >
                 <AlertDescription className="text-sm">
                   <div className="flex justify-between items-start">
@@ -222,10 +223,12 @@ export default function RouteMapTracking({
 
       {/* Google Maps Integration */}
       <RouteMapView
+        routeId={routeId}
         stops={stops}
         repLocations={repLocations}
         routeName="Live Route Tracking"
         isLoading={isLoading}
+        onSaveOptimizedOrder={onSaveOptimizedOrder}
       />
 
       {/* Rep Locations List and Details */}
@@ -249,11 +252,10 @@ export default function RouteMapTracking({
                   <div
                     key={rep.userId}
                     onClick={() => setSelectedRep(rep)}
-                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                      isSelected
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
+                    className={`p-4 border rounded-lg cursor-pointer transition-all ${isSelected
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300"
+                      }`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">

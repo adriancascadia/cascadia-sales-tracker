@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { Users, MapPin, Package, FileText, TrendingUp, Clock, Plus, DollarSign, Trash2, Download } from "lucide-react";
+import { Package, Plus, DollarSign, Trash2, Download, FileText } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -21,7 +21,7 @@ export default function Orders() {
   const [location] = useLocation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
-  
+
   // Check for customer ID in URL parameters
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -34,13 +34,13 @@ export default function Orders() {
   const [orderItems, setOrderItems] = useState<Array<{ productId: number; quantity: number; unitPrice: string }>>([]);
   const [specialInstructions, setSpecialInstructions] = useState<string>("");
   const [internalNotes, setInternalNotes] = useState<string>("");
-  
+
   const utils = trpc.useUtils();
   const { data: orders, isLoading } = trpc.orders.list.useQuery();
   const { data: customers } = trpc.customers.list.useQuery();
   const { data: products } = trpc.products.list.useQuery();
   const { data: distributors } = trpc.distributors.list.useQuery();
-  
+
   const createMutation = trpc.orders.create.useMutation({
     onSuccess: () => {
       utils.orders.list.invalidate();
@@ -53,7 +53,7 @@ export default function Orders() {
       toast.success("Order created successfully");
     },
   });
-  
+
   const submitMutation = trpc.orders.submitOrder.useMutation({
     onSuccess: () => {
       utils.orders.list.invalidate();
@@ -83,41 +83,41 @@ export default function Orders() {
       toast.error(error.message || "Failed to generate invoice");
     },
   });
-  
+
   const addOrderItem = () => {
     setOrderItems([...orderItems, { productId: 0, quantity: 1, unitPrice: "0" }]);
   };
-  
+
   const removeOrderItem = (index: number) => {
     setOrderItems(orderItems.filter((_, i) => i !== index));
   };
-  
+
   const updateOrderItem = (index: number, field: string, value: any) => {
     const updated = [...orderItems];
     updated[index] = { ...updated[index], [field]: value };
     setOrderItems(updated);
   };
-  
+
   const calculateTotal = () => {
     return orderItems.reduce((sum, item) => {
       return sum + (parseFloat(item.unitPrice) * item.quantity);
     }, 0);
   };
-  
+
   const handleCreateOrder = () => {
     if (!selectedCustomerId) {
       toast.error("Please select a customer");
       return;
     }
-    
+
     if (orderItems.length === 0) {
       toast.error("Please add at least one product");
       return;
     }
-    
+
     const total = calculateTotal();
     const orderNumber = `ORD-${Date.now()}`;
-    
+
     createMutation.mutate({
       customerId: parseInt(selectedCustomerId),
       orderNumber,
@@ -134,24 +134,13 @@ export default function Orders() {
       })),
     });
   };
-  
+
   const formatDate = (dateString: string | Date) => {
     return new Date(dateString).toLocaleDateString();
   };
 
   return (
-    <DashboardLayout
-      navItems={[
-        { href: "/", label: "Dashboard", icon: TrendingUp },
-        { href: "/customers", label: "Customers", icon: Users },
-        { href: "/routes", label: "Routes", icon: MapPin },
-        { href: "/visits", label: "Visits", icon: Clock },
-        { href: "/orders", label: "Orders", icon: Package },
-        { href: "/products", label: "Products", icon: Package },
-        { href: "/tracking", label: "Live Tracking", icon: MapPin },
-        { href: "/reports", label: "Reports", icon: FileText },
-      ]}
-    >
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -165,161 +154,161 @@ export default function Orders() {
               <DialogTrigger asChild>
                 <Button><Plus className="h-4 w-4 mr-2" />Create Order</Button>
               </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Create New Order</DialogTitle>
-                <DialogDescription>Add products and submit order</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="grid gap-2">
-                  <Label>Customer *</Label>
-                  <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customers?.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id.toString()}>
-                          {customer.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label>Order Items</Label>
-                    <Button type="button" size="sm" variant="outline" onClick={addOrderItem}>
-                      <Plus className="h-4 w-4 mr-1" />Add Item
-                    </Button>
+              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create New Order</DialogTitle>
+                  <DialogDescription>Add products and submit order</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid gap-2">
+                    <Label>Customer *</Label>
+                    <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select customer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customers?.map((customer) => (
+                          <SelectItem key={customer.id} value={customer.id.toString()}>
+                            {customer.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  
-                  <div className="space-y-3">
-                    {orderItems.map((item, index) => {
-                      const lineTotal = item.quantity * parseFloat(item.unitPrice || "0");
-                      return (
-                        <div key={index} className="border rounded-lg p-3 bg-muted/30">
-                          <div className="flex gap-2 items-start mb-2">
-                            <div className="flex-1">
-                              <ProductSelector
-                                products={products || []}
-                                distributors={distributors || []}
-                                value={item.productId}
-                                onSelect={(productId, price) => {
-                                  updateOrderItem(index, "productId", productId);
-                                  updateOrderItem(index, "unitPrice", price);
-                                }}
-                                placeholder="Search products..."
-                              />
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label>Order Items</Label>
+                      <Button type="button" size="sm" variant="outline" onClick={addOrderItem}>
+                        <Plus className="h-4 w-4 mr-1" />Add Item
+                      </Button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {orderItems.map((item, index) => {
+                        const lineTotal = item.quantity * parseFloat(item.unitPrice || "0");
+                        return (
+                          <div key={index} className="border rounded-lg p-3 bg-muted/30">
+                            <div className="flex gap-2 items-start mb-2">
+                              <div className="flex-1">
+                                <ProductSelector
+                                  products={products || []}
+                                  distributors={distributors || []}
+                                  value={item.productId}
+                                  onSelect={(productId, price) => {
+                                    updateOrderItem(index, "productId", productId);
+                                    updateOrderItem(index, "unitPrice", price);
+                                  }}
+                                  placeholder="Search products..."
+                                />
+                              </div>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => removeOrderItem(index)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => removeOrderItem(index)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <div className="flex gap-2 items-center">
-                            <div className="flex items-center gap-1">
-                              <Label className="text-xs text-muted-foreground">Qty:</Label>
+                            <div className="flex gap-2 items-center">
                               <div className="flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={() => updateOrderItem(index, "quantity", Math.max(1, item.quantity - 1))}
-                                >
-                                  -
-                                </Button>
+                                <Label className="text-xs text-muted-foreground">Qty:</Label>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => updateOrderItem(index, "quantity", Math.max(1, item.quantity - 1))}
+                                  >
+                                    -
+                                  </Button>
+                                  <Input
+                                    type="number"
+                                    value={item.quantity}
+                                    onChange={(e) => updateOrderItem(index, "quantity", parseInt(e.target.value) || 1)}
+                                    className="w-16 h-8 text-center"
+                                    min="1"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => updateOrderItem(index, "quantity", item.quantity + 1)}
+                                  >
+                                    +
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Label className="text-xs text-muted-foreground">Unit Price:</Label>
                                 <Input
                                   type="number"
-                                  value={item.quantity}
-                                  onChange={(e) => updateOrderItem(index, "quantity", parseInt(e.target.value) || 1)}
-                                  className="w-16 h-8 text-center"
-                                  min="1"
+                                  step="0.01"
+                                  value={item.unitPrice}
+                                  onChange={(e) => updateOrderItem(index, "unitPrice", e.target.value)}
+                                  className="w-24 h-8"
                                 />
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={() => updateOrderItem(index, "quantity", item.quantity + 1)}
-                                >
-                                  +
-                                </Button>
+                              </div>
+                              <div className="ml-auto flex items-center gap-2">
+                                <Label className="text-xs text-muted-foreground">Line Total:</Label>
+                                <span className="text-lg font-bold text-primary">
+                                  ${lineTotal.toFixed(2)}
+                                </span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <Label className="text-xs text-muted-foreground">Unit Price:</Label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={item.unitPrice}
-                                onChange={(e) => updateOrderItem(index, "unitPrice", e.target.value)}
-                                className="w-24 h-8"
-                              />
-                            </div>
-                            <div className="ml-auto flex items-center gap-2">
-                              <Label className="text-xs text-muted-foreground">Line Total:</Label>
-                              <span className="text-lg font-bold text-primary">
-                                ${lineTotal.toFixed(2)}
-                              </span>
-                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                
-                <div className="grid gap-4">
-                  <div className="grid gap-2">
-                    <Label>Special Instructions (Customer-Facing)</Label>
-                    <p className="text-xs text-muted-foreground">These notes will appear on the PDF invoice sent to the customer</p>
-                    <textarea
-                      className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      placeholder="e.g., Deliver to back door, Fragile items, etc."
-                      value={specialInstructions}
-                      onChange={(e) => setSpecialInstructions(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label>Internal Notes (Private)</Label>
-                    <p className="text-xs text-muted-foreground">Private notes only visible to you and managers - will NOT appear on customer invoices</p>
-                    <textarea
-                      className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      placeholder="e.g., Customer mentioned competitor pricing, Follow up next week, etc."
-                      value={internalNotes}
-                      onChange={(e) => setInternalNotes(e.target.value)}
-                    />
-                  </div>
-                </div>
-                
-                {orderItems.length > 0 && (
-                  <div className="bg-primary/10 rounded-lg p-4 border-2 border-primary/20">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Order Total</p>
-                        <p className="text-xs text-muted-foreground">{orderItems.length} item(s)</p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-3xl font-bold text-primary">${calculateTotal().toFixed(2)}</span>
-                      </div>
+                        );
+                      })}
                     </div>
                   </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleCreateOrder} disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Creating..." : "Create Order"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
+
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <Label>Special Instructions (Customer-Facing)</Label>
+                      <p className="text-xs text-muted-foreground">These notes will appear on the PDF invoice sent to the customer</p>
+                      <textarea
+                        className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder="e.g., Deliver to back door, Fragile items, etc."
+                        value={specialInstructions}
+                        onChange={(e) => setSpecialInstructions(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label>Internal Notes (Private)</Label>
+                      <p className="text-xs text-muted-foreground">Private notes only visible to you and managers - will NOT appear on customer invoices</p>
+                      <textarea
+                        className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder="e.g., Customer mentioned competitor pricing, Follow up next week, etc."
+                        value={internalNotes}
+                        onChange={(e) => setInternalNotes(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {orderItems.length > 0 && (
+                    <div className="bg-primary/10 rounded-lg p-4 border-2 border-primary/20">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Order Total</p>
+                          <p className="text-xs text-muted-foreground">{orderItems.length} item(s)</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-3xl font-bold text-primary">${calculateTotal().toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleCreateOrder} disabled={createMutation.isPending}>
+                    {createMutation.isPending ? "Creating..." : "Create Order"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
             </Dialog>
           </div>
         </div>
-        
+
         {isLoading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (

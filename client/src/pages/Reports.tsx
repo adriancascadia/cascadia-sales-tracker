@@ -12,16 +12,9 @@ import {
 } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import {
-  Users,
-  MapPin,
-  Package,
   FileText,
-  TrendingUp,
-  Clock,
   BarChart3,
   Download,
-  Image,
-  Truck,
 } from "lucide-react";
 
 export default function Reports() {
@@ -31,7 +24,7 @@ export default function Reports() {
 
   // Fetch all data
   const { data: overview } = trpc.analytics.getOverview.useQuery();
-  const { data: visits = [] } = trpc.visits.list.useQuery();
+  const { data: visits = [] } = trpc.visitData.list.useQuery();
   const { data: orders = [] } = trpc.orders.list.useQuery();
   const { data: users = [] } = trpc.system.listUsers.useQuery();
   const { data: photos = [] } = trpc.photos.list.useQuery();
@@ -290,19 +283,7 @@ export default function Reports() {
   };
 
   return (
-    <DashboardLayout
-      navItems={[
-        { href: "/", label: "Dashboard", icon: TrendingUp },
-        { href: "/customers", label: "Customers", icon: Users },
-        { href: "/routes", label: "Routes", icon: MapPin },
-        { href: "/visits", label: "Visits", icon: Clock },
-        { href: "/orders", label: "Orders", icon: Package },
-        { href: "/products", label: "Products", icon: Package },
-        { href: "/photo-gallery", label: "Photo Gallery", icon: Image },
-        { href: "/mileage-reports", label: "Mileage Reports", icon: Truck },
-        { href: "/reports", label: "Reports", icon: FileText },
-      ]}
-    >
+    <DashboardLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Reports & Analytics</h1>

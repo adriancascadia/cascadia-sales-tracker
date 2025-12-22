@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { AlertCircle, Play, Square, Trash2, Edit2, MapPin, Clock, Gauge } from "lucide-react";
 import { toast } from "sonner";
 
+import DashboardLayout from "@/components/DashboardLayout";
+
 export default function MileageTracking() {
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [endOdometer, setEndOdometer] = useState("");
@@ -74,7 +76,7 @@ export default function MileageTracking() {
       return;
     }
 
-    const startOdometer = parseFloat(activeLog.startOdometer || "0");
+    const startOdometer = parseFloat((activeLog as any).startOdometer || "0");
     const end = parseFloat(endOdometer);
 
     if (end < startOdometer) {
@@ -111,206 +113,207 @@ export default function MileageTracking() {
   };
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Mileage Tracking</h1>
-        <p className="text-muted-foreground">Log your daily mileage for reimbursement</p>
-      </div>
+    <DashboardLayout>
+      <div className="container mx-auto py-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold">Mileage Tracking</h1>
+          <p className="text-muted-foreground">Log your daily mileage for reimbursement</p>
+        </div>
 
-      {/* Active Mileage Log */}
-      {activeLog ? (
-        <Card className="mb-6 border-blue-200 bg-blue-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-blue-900">
-              <Gauge className="h-5 w-5" />
-              Active Mileage Log
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Start Time</p>
-                <p className="font-semibold">{formatDate(activeLog.startTime)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Start Odometer</p>
-                <p className="font-semibold text-lg">{activeLog.startOdometer} mi</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Duration</p>
-                <p className="font-semibold">{calculateDuration(activeLog.startTime)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Status</p>
-                <p className="font-semibold text-blue-600">Active</p>
-              </div>
-            </div>
-
-            <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
-              <DialogTrigger asChild>
-                <Button variant="destructive" className="w-full">
-                  <Square className="h-4 w-4 mr-2" />
-                  End Mileage Log
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>End Mileage Log</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Start Odometer</label>
-                    <Input
-                      type="number"
-                      value={activeLog.startOdometer}
-                      disabled
-                      className="bg-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">End Odometer (miles)</label>
-                    <Input
-                      type="number"
-                      placeholder="Enter end odometer reading"
-                      value={endOdometer}
-                      onChange={(e) => setEndOdometer(e.target.value)}
-                      step="0.1"
-                    />
-                  </div>
-                  {endOdometer && (
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <p className="text-sm text-muted-foreground">Total Distance</p>
-                      <p className="text-2xl font-bold text-blue-600">
-                        {(parseFloat(endOdometer) - parseFloat(activeLog.startOdometer || "0")).toFixed(2)} mi
-                      </p>
-                    </div>
-                  )}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Notes (Optional)</label>
-                    <Textarea
-                      placeholder="Add any notes about your route or stops..."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      rows={3}
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowEndDialog(false)}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleEndMileage}
-                      disabled={endMileageMutation.isPending}
-                      className="flex-1"
-                    >
-                      {endMileageMutation.isPending ? "Saving..." : "End Log"}
-                    </Button>
-                  </div>
+        {/* Active Mileage Log */}
+        {activeLog ? (
+          <Card className="mb-6 border-blue-200 bg-blue-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-900">
+                <Gauge className="h-5 w-5" />
+                Active Mileage Log
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Start Time</p>
+                  <p className="font-semibold">{formatDate(activeLog.startTime)}</p>
                 </div>
-              </DialogContent>
-            </Dialog>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="mb-6 border-gray-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-gray-500" />
-              No Active Mileage Log
-            </CardTitle>
-            <CardDescription>Start tracking your mileage for the day</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              onClick={handleStartMileage}
-              disabled={startMileageMutation.isPending}
-              size="lg"
-              className="w-full"
-            >
-              <Play className="h-4 w-4 mr-2" />
-              {startMileageMutation.isPending ? "Starting..." : "Start Mileage Log"}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+                <div>
+                  <p className="text-sm text-muted-foreground">Start Odometer</p>
+                  <p className="font-semibold text-lg">{(activeLog as any).startOdometer} mi</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Duration</p>
+                  <p className="font-semibold">{calculateDuration(activeLog.startTime)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <p className="font-semibold text-blue-600">Active</p>
+                </div>
+              </div>
 
-      {/* Mileage History */}
-      <div>
-        <h2 className="text-2xl font-bold mb-4">Mileage History</h2>
-
-        {allLogs.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <Gauge className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-lg font-medium">No mileage logs yet</p>
-              <p className="text-sm text-muted-foreground">Start tracking to see your history</p>
+              <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="destructive" className="w-full">
+                    <Square className="h-4 w-4 mr-2" />
+                    End Mileage Log
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>End Mileage Log</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Start Odometer</label>
+                      <Input
+                        type="number"
+                        value={(activeLog as any).startOdometer}
+                        disabled
+                        className="bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">End Odometer (miles)</label>
+                      <Input
+                        type="number"
+                        placeholder="Enter end odometer reading"
+                        value={endOdometer}
+                        onChange={(e) => setEndOdometer(e.target.value)}
+                        step="0.1"
+                      />
+                    </div>
+                    {endOdometer && (
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Total Distance</p>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {(parseFloat(endOdometer) - parseFloat((activeLog as any).startOdometer || "0")).toFixed(2)} mi
+                        </p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Notes (Optional)</label>
+                      <Textarea
+                        placeholder="Add any notes about your route or stops..."
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowEndDialog(false)}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleEndMileage}
+                        disabled={endMileageMutation.isPending}
+                        className="flex-1"
+                      >
+                        {endMileageMutation.isPending ? "Saving..." : "End Log"}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {allLogs.map((log: any) => (
-              <Card key={log.id} className="overflow-hidden">
-                <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Date</p>
-                      <p className="font-semibold">{formatDate(log.startTime)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Distance</p>
-                      <p className="font-semibold text-lg">
-                        {log.totalDistance ? `${log.totalDistance} mi` : "—"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Duration</p>
-                      <p className="font-semibold">
-                        {log.endTime ? calculateDuration(log.startTime, log.endTime) : "Active"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Status</p>
-                      <p
-                        className={`font-semibold ${
-                          log.status === "completed"
+          <Card className="mb-6 border-gray-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-gray-500" />
+                No Active Mileage Log
+              </CardTitle>
+              <CardDescription>Start tracking your mileage for the day</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={handleStartMileage}
+                disabled={startMileageMutation.isPending}
+                size="lg"
+                className="w-full"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                {startMileageMutation.isPending ? "Starting..." : "Start Mileage Log"}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Mileage History */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Mileage History</h2>
+
+          {allLogs.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <Gauge className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-lg font-medium">No mileage logs yet</p>
+                <p className="text-sm text-muted-foreground">Start tracking to see your history</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {allLogs.map((log: any) => (
+                <Card key={log.id} className="overflow-hidden">
+                  <CardContent className="pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Date</p>
+                        <p className="font-semibold">{formatDate(log.startTime)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Distance</p>
+                        <p className="font-semibold text-lg">
+                          {log.totalDistance ? `${log.totalDistance} mi` : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Duration</p>
+                        <p className="font-semibold">
+                          {log.endTime ? calculateDuration(log.startTime, log.endTime) : "Active"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Status</p>
+                        <p
+                          className={`font-semibold ${log.status === "completed"
                             ? "text-green-600"
                             : log.status === "active"
-                            ? "text-blue-600"
-                            : "text-gray-600"
-                        }`}
-                      >
-                        {log.status === "completed" ? "Completed" : "Active"}
-                      </p>
-                    </div>
-                    <div className="flex gap-2 justify-end">
-                      {log.status === "completed" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteLog(log.id)}
-                          disabled={deleteMileageMutation.isPending}
+                              ? "text-blue-600"
+                              : "text-gray-600"
+                            }`}
                         >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      )}
+                          {log.status === "completed" ? "Completed" : "Active"}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        {log.status === "completed" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteLog(log.id)}
+                            disabled={deleteMileageMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  {log.notes && (
-                    <div className="mt-3 pt-3 border-t">
-                      <p className="text-sm text-muted-foreground">Notes</p>
-                      <p className="text-sm">{log.notes}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                    {log.notes && (
+                      <div className="mt-3 pt-3 border-t">
+                        <p className="text-sm text-muted-foreground">Notes</p>
+                        <p className="text-sm">{log.notes}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

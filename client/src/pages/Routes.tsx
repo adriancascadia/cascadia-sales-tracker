@@ -17,24 +17,24 @@ import { useRouteGpsTracking } from "@/_core/hooks/useRouteGpsTracking";
 export default function Routes() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
-  
+
   const utils = trpc.useUtils();
   const { data: routes, isLoading } = trpc.routes.list.useQuery();
   const { data: selectedRoute } = trpc.routes.getById.useQuery(
     { id: selectedRouteId! },
     { enabled: selectedRouteId !== null }
   );
-  
+
   const { data: routeWithStops } = trpc.routes.getWithStops.useQuery(
     { routeId: selectedRouteId! },
     { enabled: selectedRouteId !== null }
   );
-  
+
   const { repLocations, isLoading: gpsLoading } = useRouteGpsTracking(
     selectedRouteId || 0,
     5000
   );
-  
+
   const autoAssignMutation = trpc.routes.autoAssignCustomers.useMutation({
     onSuccess: () => {
       utils.routes.getWithStops.invalidate({ routeId: selectedRouteId! });
@@ -44,7 +44,7 @@ export default function Routes() {
       toast.error(error.message || "Failed to assign customers");
     },
   });
-  
+
   const createMutation = trpc.routes.create.useMutation({
     onSuccess: () => {
       utils.routes.list.invalidate();
@@ -52,7 +52,27 @@ export default function Routes() {
       toast.success("Route created successfully");
     },
   });
-  
+
+  const reorderMutation = trpc.routes.reorderStops.useMutation({
+    onSuccess: () => {
+      utils.routes.getWithStops.invalidate({ routeId: selectedRouteId! });
+    },
+  });
+
+  const handleSaveOptimizedOrder = async (orderedStopIds: number[]) => {
+    if (!selectedRouteId) return;
+
+    const stops = orderedStopIds.map((id, index) => ({
+      id,
+      stopOrder: index + 1,
+    }));
+
+    await reorderMutation.mutateAsync({
+      routeId: selectedRouteId,
+      stops,
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -61,7 +81,7 @@ export default function Routes() {
       routeDate: formData.get("routeDate") as string,
     });
   };
-  
+
   const formatDate = (dateString: string | Date) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -75,22 +95,11 @@ export default function Routes() {
     }).length || 0;
 
     return (
-      <DashboardLayout
-        navItems={[
-          { href: "/", label: "Dashboard", icon: TrendingUp },
-          { href: "/customers", label: "Customers", icon: Users },
-          { href: "/routes", label: "Routes", icon: MapPin },
-          { href: "/visits", label: "Visits", icon: Clock },
-          { href: "/orders", label: "Orders", icon: Package },
-          { href: "/products", label: "Products", icon: Package },
-          { href: "/tracking", label: "Live Tracking", icon: MapPin },
-          { href: "/reports", label: "Reports", icon: FileText },
-        ]}
-      >
+      <DashboardLayout>
         <div className="space-y-6">
           <div className="flex items-center gap-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => setSelectedRouteId(null)}
             >
@@ -112,6 +121,7 @@ export default function Routes() {
               stops={routeWithStops.stops || []}
               repLocations={repLocations}
               isLoading={gpsLoading}
+              onSaveOptimizedOrder={handleSaveOptimizedOrder}
             />
           )}
 
@@ -142,7 +152,7 @@ export default function Routes() {
                     <p className="text-sm text-muted-foreground">Status</p>
                     <Badge variant={
                       selectedRoute.status === "completed" ? "default" :
-                      selectedRoute.status === "in_progress" ? "secondary" : "outline"
+                        selectedRoute.status === "in_progress" ? "secondary" : "outline"
                     }>
                       {selectedRoute.status}
                     </Badge>
@@ -177,7 +187,7 @@ export default function Routes() {
                 ) : (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground mb-4">No customers assigned to this route yet</p>
-                    <Button 
+                    <Button
                       onClick={() => autoAssignMutation.mutate({ routeId: selectedRouteId })}
                       disabled={autoAssignMutation.isPending}
                       className="w-full"
@@ -196,25 +206,14 @@ export default function Routes() {
   }
 
   return (
-    <DashboardLayout
-      navItems={[
-        { href: "/", label: "Dashboard", icon: TrendingUp },
-        { href: "/customers", label: "Customers", icon: Users },
-        { href: "/routes", label: "Routes", icon: MapPin },
-        { href: "/visits", label: "Visits", icon: Clock },
-        { href: "/orders", label: "Orders", icon: Package },
-        { href: "/products", label: "Products", icon: Package },
-        { href: "/tracking", label: "Live Tracking", icon: MapPin },
-        { href: "/reports", label: "Reports", icon: FileText },
-      ]}
-    >
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Routes</h1>
             <p className="text-muted-foreground">Plan and manage daily routes</p>
           </div>
-          
+
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" />Create Route</Button>
@@ -245,7 +244,7 @@ export default function Routes() {
             </DialogContent>
           </Dialog>
         </div>
-        
+
         {isLoading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
@@ -259,7 +258,7 @@ export default function Routes() {
         ) : routes && routes.length > 0 ? (
           <div className="space-y-4">
             {routes.map((route) => (
-              <Card 
+              <Card
                 key={route.id}
                 className="cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => setSelectedRouteId(route.id)}
@@ -277,7 +276,7 @@ export default function Routes() {
                     </div>
                     <Badge variant={
                       route.status === "completed" ? "default" :
-                      route.status === "in_progress" ? "secondary" : "outline"
+                        route.status === "in_progress" ? "secondary" : "outline"
                     }>
                       {route.status}
                     </Badge>

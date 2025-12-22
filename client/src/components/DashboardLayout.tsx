@@ -27,11 +27,7 @@ import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
 
-// Default menu items - can be overridden by navItems prop
-const defaultMenuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Users, label: "Users", path: "/users" },
-];
+import { NAV_ITEMS } from "@/lib/navigation";
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
@@ -40,19 +36,17 @@ const MAX_WIDTH = 480;
 
 export default function DashboardLayout({
   children,
-  navItems,
+  navItems = NAV_ITEMS,
 }: {
   children: React.ReactNode;
   navItems?: Array<{ href: string; label: string; icon: any }>;
 }) {
   // Convert navItems to menuItems format
-  const menuItems = navItems
-    ? navItems.map(item => ({
-        icon: item.icon,
-        label: item.label,
-        path: item.href,
-      }))
-    : defaultMenuItems;
+  const menuItems = navItems.map(item => ({
+    icon: item.icon,
+    label: item.label,
+    path: item.href,
+  }));
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
@@ -186,14 +180,20 @@ function DashboardLayoutContent({
           <SidebarHeader className="h-16 justify-center">
             <div className="flex items-center gap-3 pl-2 group-data-[collapsible=icon]:px-0 transition-all w-full">
               {isCollapsed ? (
-                <div className="relative h-8 w-8 shrink-0 group">
+                <div
+                  className="relative h-10 w-10 shrink-0 group cursor-pointer hover:opacity-80 transition-all active:scale-95"
+                  onClick={() => setLocation('/')}
+                >
                   <img
                     src="/cascadia-icon.png"
                     className="h-10 w-10 rounded-lg object-cover ring-2 ring-border"
                     alt="Cascadia"
                   />
                   <button
-                    onClick={toggleSidebar}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSidebar();
+                    }}
                     className="absolute inset-0 flex items-center justify-center bg-accent rounded-md ring-1 ring-border opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <PanelLeft className="h-4 w-4 text-foreground" />
@@ -201,7 +201,10 @@ function DashboardLayoutContent({
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className="flex items-center gap-3 min-w-0 cursor-pointer hover:opacity-80 transition-all active:scale-95"
+                    onClick={() => setLocation('/')}
+                  >
                     <img
                       src="/cascadia-icon.png"
                       className="h-12 w-12 rounded-lg object-cover ring-2 ring-border shrink-0"
@@ -209,7 +212,7 @@ function DashboardLayoutContent({
                     />
                     <div className="flex flex-col min-w-0">
                       <span className="font-bold text-base tracking-tight truncate">
-                        Cascadia
+                        Cascadia Managing Brands
                       </span>
                       <span className="text-xs text-muted-foreground truncate">
                         Sales Tracker
@@ -296,7 +299,10 @@ function DashboardLayoutContent({
           <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
-              <div className="flex items-center gap-3">
+              <div
+                className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-all active:scale-95"
+                onClick={() => setLocation('/')}
+              >
                 <div className="flex flex-col gap-1">
                   <span className="tracking-tight text-foreground">
                     {activeMenuItem?.label ?? APP_TITLE}

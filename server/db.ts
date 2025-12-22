@@ -1,7 +1,7 @@
 import { eq, and, desc, asc, gte, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { 
-  InsertUser, users, 
+import {
+  InsertUser, users,
   companies, Company,
   customers, InsertCustomer, Customer,
   routes, InsertRoute, Route,
@@ -119,6 +119,37 @@ export async function getUserByOpenId(openId: string) {
   }
 }
 
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result[0];
+}
+
+export async function createUser(user: InsertUser) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(users).values(user);
+}
+
+export async function updateUser(id: number, data: Partial<InsertUser>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set(data).where(eq(users.id, id));
+}
+
+export async function deleteUser(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(users).where(eq(users.id, id));
+}
+
+export async function getUsersByCompanyId(companyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(users).where(eq(users.companyId, companyId)).orderBy(asc(users.name));
+}
+
 export async function getAllUsers() {
   const db = await getDb();
   if (!db) return [];
@@ -130,7 +161,7 @@ export async function getAllUsers() {
 export async function createCustomer(customer: InsertCustomer) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(customers).values(customer);
   return result;
 }
@@ -138,7 +169,7 @@ export async function createCustomer(customer: InsertCustomer) {
 export async function getCustomersByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(customers)
     .where(eq(customers.userId, userId))
     .orderBy(asc(customers.name));
@@ -147,7 +178,7 @@ export async function getCustomersByUserId(userId: number) {
 export async function getAllCustomers() {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(customers)
     .orderBy(asc(customers.name));
 }
@@ -155,18 +186,18 @@ export async function getAllCustomers() {
 export async function getCustomerById(id: number) {
   const db = await getDb();
   if (!db) return null;
-  
+
   const result = await db.select().from(customers)
     .where(eq(customers.id, id))
     .limit(1);
-  
+
   return result.length > 0 ? result[0] : null;
 }
 
 export async function updateCustomer(id: number, data: Partial<InsertCustomer>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.update(customers)
     .set(data)
     .where(eq(customers.id, id));
@@ -175,7 +206,7 @@ export async function updateCustomer(id: number, data: Partial<InsertCustomer>) 
 export async function deleteCustomer(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.delete(customers).where(eq(customers.id, id));
 }
 
@@ -184,7 +215,7 @@ export async function deleteCustomer(id: number) {
 export async function createRoute(route: InsertRoute) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(routes).values(route);
   return result;
 }
@@ -192,7 +223,7 @@ export async function createRoute(route: InsertRoute) {
 export async function getRoutesByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(routes)
     .where(eq(routes.userId, userId))
     .orderBy(desc(routes.routeDate));
@@ -201,7 +232,7 @@ export async function getRoutesByUserId(userId: number) {
 export async function getRoutesByDate(userId: number, date: string) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(routes)
     .where(and(
       eq(routes.userId, userId),
@@ -213,18 +244,18 @@ export async function getRoutesByDate(userId: number, date: string) {
 export async function getRouteById(id: number) {
   const db = await getDb();
   if (!db) return null;
-  
+
   const result = await db.select().from(routes)
     .where(eq(routes.id, id))
     .limit(1);
-  
+
   return result.length > 0 ? result[0] : null;
 }
 
 export async function updateRoute(id: number, data: Partial<InsertRoute>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.update(routes)
     .set(data)
     .where(eq(routes.id, id));
@@ -233,7 +264,7 @@ export async function updateRoute(id: number, data: Partial<InsertRoute>) {
 export async function deleteRoute(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.delete(routes).where(eq(routes.id, id));
 }
 
@@ -242,7 +273,7 @@ export async function deleteRoute(id: number) {
 export async function createRouteStop(stop: InsertRouteStop) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(routeStops).values(stop);
   return result;
 }
@@ -250,7 +281,7 @@ export async function createRouteStop(stop: InsertRouteStop) {
 export async function getRouteStopsByRouteId(routeId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(routeStops)
     .where(eq(routeStops.routeId, routeId))
     .orderBy(asc(routeStops.stopOrder));
@@ -259,7 +290,7 @@ export async function getRouteStopsByRouteId(routeId: number) {
 export async function updateRouteStop(id: number, data: Partial<InsertRouteStop>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.update(routeStops)
     .set(data)
     .where(eq(routeStops.id, id));
@@ -268,7 +299,7 @@ export async function updateRouteStop(id: number, data: Partial<InsertRouteStop>
 export async function deleteRouteStop(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.delete(routeStops).where(eq(routeStops.id, id));
 }
 
@@ -277,7 +308,7 @@ export async function deleteRouteStop(id: number) {
 export async function createVisit(visit: InsertVisit) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(visits).values(visit);
   return result;
 }
@@ -285,7 +316,7 @@ export async function createVisit(visit: InsertVisit) {
 export async function getVisitsByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(visits)
     .where(eq(visits.userId, userId))
     .orderBy(desc(visits.checkInTime));
@@ -294,7 +325,7 @@ export async function getVisitsByUserId(userId: number) {
 export async function getVisitsByCustomerId(customerId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(visits)
     .where(eq(visits.customerId, customerId))
     .orderBy(desc(visits.checkInTime));
@@ -303,7 +334,7 @@ export async function getVisitsByCustomerId(customerId: number) {
 export async function getActiveVisitByUserId(userId: number) {
   const db = await getDb();
   if (!db) return null;
-  
+
   const result = await db.select().from(visits)
     .where(and(
       eq(visits.userId, userId),
@@ -311,25 +342,37 @@ export async function getActiveVisitByUserId(userId: number) {
     ))
     .orderBy(desc(visits.checkInTime))
     .limit(1);
-  
+
   return result.length > 0 ? result[0] : null;
+}
+
+export async function getAllActiveVisits(companyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(visits)
+    .where(and(
+      eq(visits.companyId, companyId),
+      eq(visits.status, "in_progress")
+    ))
+    .orderBy(desc(visits.checkInTime));
 }
 
 export async function getVisitById(id: number) {
   const db = await getDb();
   if (!db) return null;
-  
+
   const result = await db.select().from(visits)
     .where(eq(visits.id, id))
     .limit(1);
-  
+
   return result.length > 0 ? result[0] : null;
 }
 
 export async function updateVisit(id: number, data: Partial<InsertVisit>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.update(visits)
     .set(data)
     .where(eq(visits.id, id));
@@ -340,7 +383,7 @@ export async function updateVisit(id: number, data: Partial<InsertVisit>) {
 export async function createVisitActivity(activity: InsertVisitActivity) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(visitActivities).values(activity);
   return result;
 }
@@ -348,7 +391,7 @@ export async function createVisitActivity(activity: InsertVisitActivity) {
 export async function getVisitActivitiesByVisitId(visitId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(visitActivities)
     .where(eq(visitActivities.visitId, visitId))
     .orderBy(desc(visitActivities.createdAt));
@@ -359,7 +402,7 @@ export async function getVisitActivitiesByVisitId(visitId: number) {
 export async function createProduct(product: InsertProduct) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(products).values(product);
   return result;
 }
@@ -367,7 +410,7 @@ export async function createProduct(product: InsertProduct) {
 export async function getAllProducts() {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(products)
     .where(eq(products.active, true))
     .orderBy(asc(products.name));
@@ -376,18 +419,18 @@ export async function getAllProducts() {
 export async function getProductById(id: number) {
   const db = await getDb();
   if (!db) return null;
-  
+
   const result = await db.select().from(products)
     .where(eq(products.id, id))
     .limit(1);
-  
+
   return result.length > 0 ? result[0] : null;
 }
 
 export async function updateProduct(id: number, data: Partial<InsertProduct>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.update(products)
     .set(data)
     .where(eq(products.id, id));
@@ -398,7 +441,7 @@ export async function updateProduct(id: number, data: Partial<InsertProduct>) {
 export async function createOrder(order: InsertOrder) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(orders).values(order);
   return result;
 }
@@ -406,7 +449,7 @@ export async function createOrder(order: InsertOrder) {
 export async function getOrdersByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(orders)
     .where(eq(orders.userId, userId))
     .orderBy(desc(orders.orderDate));
@@ -415,7 +458,7 @@ export async function getOrdersByUserId(userId: number) {
 export async function getOrdersByCustomerId(customerId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(orders)
     .where(eq(orders.customerId, customerId))
     .orderBy(desc(orders.orderDate));
@@ -424,18 +467,18 @@ export async function getOrdersByCustomerId(customerId: number) {
 export async function getOrderById(id: number) {
   const db = await getDb();
   if (!db) return null;
-  
+
   const result = await db.select().from(orders)
     .where(eq(orders.id, id))
     .limit(1);
-  
+
   return result.length > 0 ? result[0] : null;
 }
 
 export async function updateOrder(id: number, data: Partial<InsertOrder>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.update(orders)
     .set(data)
     .where(eq(orders.id, id));
@@ -446,7 +489,7 @@ export async function updateOrder(id: number, data: Partial<InsertOrder>) {
 export async function createOrderItem(item: InsertOrderItem) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(orderItems).values(item);
   return result;
 }
@@ -454,7 +497,7 @@ export async function createOrderItem(item: InsertOrderItem) {
 export async function getOrderItemsByOrderId(orderId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(orderItems)
     .where(eq(orderItems.orderId, orderId));
 }
@@ -464,7 +507,7 @@ export async function getOrderItemsByOrderId(orderId: number) {
 export async function createPhoto(photo: InsertPhoto) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(photos).values(photo);
   return result;
 }
@@ -472,7 +515,7 @@ export async function createPhoto(photo: InsertPhoto) {
 export async function getPhotosByVisitId(visitId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(photos)
     .where(eq(photos.visitId, visitId))
     .orderBy(desc(photos.takenAt));
@@ -481,7 +524,7 @@ export async function getPhotosByVisitId(visitId: number) {
 export async function getPhotosByCustomerId(customerId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(photos)
     .where(eq(photos.customerId, customerId))
     .orderBy(desc(photos.takenAt));
@@ -490,7 +533,7 @@ export async function getPhotosByCustomerId(customerId: number) {
 export async function getPhotosByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(photos)
     .where(eq(photos.userId, userId))
     .orderBy(desc(photos.takenAt));
@@ -499,28 +542,28 @@ export async function getPhotosByUserId(userId: number) {
 export async function getAllPhotos() {
   const db = await getDb();
   if (!db) return [];
-  
+
   const allPhotos = await db.select().from(photos).orderBy(desc(photos.takenAt));
-  
+
   const enrichedPhotos = await Promise.all(
     allPhotos.map(async (photo) => {
       let userName = null;
       let customerName = null;
-      
+
       if (photo.userId) {
         const userList = await db.select().from(users).where(eq(users.id, photo.userId)).limit(1);
         if (userList.length > 0) {
           userName = userList[0].name || userList[0].email || null;
         }
       }
-      
+
       if (photo.customerId) {
         const customerList = await db.select().from(customers).where(eq(customers.id, photo.customerId)).limit(1);
         if (customerList.length > 0) {
           customerName = customerList[0].name || null;
         }
       }
-      
+
       return {
         ...photo,
         userName,
@@ -528,7 +571,7 @@ export async function getAllPhotos() {
       };
     })
   );
-  
+
   return enrichedPhotos;
 }
 
@@ -537,7 +580,7 @@ export async function getAllPhotos() {
 export async function createGpsTrack(track: InsertGpsTrack) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(gpsTracks).values(track);
   return result;
 }
@@ -545,19 +588,19 @@ export async function createGpsTrack(track: InsertGpsTrack) {
 export async function getLatestGpsTrackByUserId(userId: number) {
   const db = await getDb();
   if (!db) return null;
-  
+
   const result = await db.select().from(gpsTracks)
     .where(eq(gpsTracks.userId, userId))
     .orderBy(desc(gpsTracks.timestamp))
     .limit(1);
-  
+
   return result.length > 0 ? result[0] : null;
 }
 
 export async function getGpsTracksByUserIdAndTimeRange(userId: number, startTime: Date, endTime: Date) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(gpsTracks)
     .where(and(
       eq(gpsTracks.userId, userId),
@@ -567,15 +610,18 @@ export async function getGpsTracksByUserIdAndTimeRange(userId: number, startTime
     .orderBy(asc(gpsTracks.timestamp));
 }
 
-export async function getAllActiveGpsTracks() {
+export async function getAllActiveGpsTracks(companyId: number) {
   const db = await getDb();
   if (!db) return [];
-  
-  // Get the latest GPS track for each user from the last 5 minutes
+
+  // Get GPS tracks from the last 5 minutes
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-  
+
   return await db.select().from(gpsTracks)
-    .where(sql`${gpsTracks.timestamp} >= ${fiveMinutesAgo.toISOString()}`)
+    .where(and(
+      eq(gpsTracks.companyId, companyId),
+      gte(gpsTracks.timestamp, fiveMinutesAgo)
+    ))
     .orderBy(desc(gpsTracks.timestamp));
 }
 
@@ -584,7 +630,7 @@ export async function getAllActiveGpsTracks() {
 export async function createMileageLog(log: InsertMileageLog) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(mileageLogs).values(log);
   return result;
 }
@@ -592,7 +638,7 @@ export async function createMileageLog(log: InsertMileageLog) {
 export async function getActiveMileageLogByUserId(userId: number) {
   const db = await getDb();
   if (!db) return null;
-  
+
   const result = await db.select().from(mileageLogs)
     .where(and(
       eq(mileageLogs.userId, userId),
@@ -600,14 +646,14 @@ export async function getActiveMileageLogByUserId(userId: number) {
     ))
     .orderBy(desc(mileageLogs.startTime))
     .limit(1);
-  
+
   return result.length > 0 ? result[0] : null;
 }
 
 export async function getMileageLogsByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(mileageLogs)
     .where(eq(mileageLogs.userId, userId))
     .orderBy(desc(mileageLogs.startTime));
@@ -616,7 +662,7 @@ export async function getMileageLogsByUserId(userId: number) {
 export async function updateMileageLog(id: number, data: Partial<InsertMileageLog>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.update(mileageLogs)
     .set(data)
     .where(eq(mileageLogs.id, id));
@@ -625,7 +671,7 @@ export async function updateMileageLog(id: number, data: Partial<InsertMileageLo
 export async function getAllMileageLogs() {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(mileageLogs)
     .orderBy(desc(mileageLogs.startTime));
 }
@@ -633,7 +679,7 @@ export async function getAllMileageLogs() {
 export async function deleteMileageLog(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.delete(mileageLogs)
     .where(eq(mileageLogs.id, id));
 }
@@ -643,7 +689,7 @@ export async function deleteMileageLog(id: number) {
 export async function createAlert(data: InsertAlert) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(alerts).values(data);
   return result;
 }
@@ -651,7 +697,7 @@ export async function createAlert(data: InsertAlert) {
 export async function getUnreadAlerts() {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(alerts)
     .where(eq(alerts.isRead, 0))
     .orderBy(desc(alerts.createdAt));
@@ -660,7 +706,7 @@ export async function getUnreadAlerts() {
 export async function getAllAlerts() {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(alerts)
     .orderBy(desc(alerts.createdAt));
 }
@@ -668,7 +714,7 @@ export async function getAllAlerts() {
 export async function markAlertAsRead(alertId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.update(alerts)
     .set({ isRead: 1 })
     .where(eq(alerts.id, alertId));
@@ -677,7 +723,7 @@ export async function markAlertAsRead(alertId: number) {
 export async function markAllAlertsAsRead() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.update(alerts)
     .set({ isRead: 1 })
     .where(eq(alerts.isRead, 0));
@@ -686,7 +732,7 @@ export async function markAllAlertsAsRead() {
 export async function updateAlertNotes(alertId: number, notes: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.update(alerts)
     .set({ notes })
     .where(eq(alerts.id, alertId));
@@ -698,14 +744,14 @@ export async function updateAlertNotes(alertId: number, notes: string) {
 export async function getAllDistributors() {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(distributors);
 }
 
 export async function getDistributorById(id: number) {
   const db = await getDb();
   if (!db) return null;
-  
+
   const result = await db.select().from(distributors).where(eq(distributors.id, id)).limit(1);
   return result.length > 0 ? result[0] : null;
 }
@@ -713,7 +759,7 @@ export async function getDistributorById(id: number) {
 export async function createDistributor(data: InsertDistributor) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(distributors).values(data);
   return result[0].insertId;
 }
@@ -721,7 +767,7 @@ export async function createDistributor(data: InsertDistributor) {
 export async function updateDistributor(id: number, data: Partial<InsertDistributor>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.update(distributors)
     .set(data)
     .where(eq(distributors.id, id));
@@ -730,7 +776,7 @@ export async function updateDistributor(id: number, data: Partial<InsertDistribu
 export async function deleteDistributor(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.delete(distributors).where(eq(distributors.id, id));
 }
 
@@ -739,12 +785,12 @@ export async function deleteDistributor(id: number) {
 export async function getRouteWithStops(routeId: number) {
   const db = await getDb();
   if (!db) return null;
-  
+
   const route = await getRouteById(routeId);
   if (!route) return null;
-  
+
   const stops = await getRouteStopsByRouteId(routeId);
-  
+
   // Enrich stops with customer data
   const enrichedStops = await Promise.all(
     stops.map(async (stop) => {
@@ -755,7 +801,7 @@ export async function getRouteWithStops(routeId: number) {
       };
     })
   );
-  
+
   return {
     ...route,
     stops: enrichedStops
@@ -765,10 +811,10 @@ export async function getRouteWithStops(routeId: number) {
 export async function assignCustomersToRoute(routeId: number, customerIds: number[]) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   // Delete existing stops for this route
   await db.delete(routeStops).where(eq(routeStops.routeId, routeId));
-  
+
   // Add new stops in order
   for (let i = 0; i < customerIds.length; i++) {
     await createRouteStop({
@@ -778,18 +824,31 @@ export async function assignCustomersToRoute(routeId: number, customerIds: numbe
       plannedArrival: undefined
     });
   }
-  
+
   return { success: true, stopsCreated: customerIds.length };
+}
+
+export async function reorderRouteStops(stops: { id: number; stopOrder: number }[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  for (const stop of stops) {
+    await db.update(routeStops)
+      .set({ stopOrder: stop.stopOrder })
+      .where(eq(routeStops.id, stop.id));
+  }
+
+  return { success: true };
 }
 
 export async function getLatestGpsTracksForRoute(routeId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   // Get the route
   const route = await getRouteById(routeId);
   if (!route) return [];
-  
+
   // Get the latest GPS track for the route owner
   const latestTrack = await getLatestGpsTrackByUserId(route.userId);
   return latestTrack ? [latestTrack] : [];
@@ -798,11 +857,11 @@ export async function getLatestGpsTracksForRoute(routeId: number) {
 export async function getGpsTracksForRouteWithinTimeRange(routeId: number, startTime: Date, endTime: Date) {
   const db = await getDb();
   if (!db) return [];
-  
+
   // Get the route
   const route = await getRouteById(routeId);
   if (!route) return [];
-  
+
   // Get GPS tracks for the route owner within time range
   return await getGpsTracksByUserIdAndTimeRange(route.userId, startTime, endTime);
 }
@@ -826,10 +885,44 @@ export async function getCompanyByDomain(domain: string): Promise<Company | unde
   }
 }
 
+export async function getCompanyById(id: number): Promise<Company | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(companies).where(eq(companies.id, id)).limit(1);
+  return result[0];
+}
+
+export async function getCustomerCountByCompanyId(companyId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ count: sql<number>`count(*)` }).from(customers).where(eq(customers.companyId, companyId));
+  return Number(result[0]?.count || 0);
+}
+
+export async function getOrderCountByCompanyId(companyId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.companyId, companyId));
+  return Number(result[0]?.count || 0);
+}
+
+export async function getVisitCountByCompanyId(companyId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ count: sql<number>`count(*)` }).from(visits).where(eq(visits.companyId, companyId));
+  return Number(result[0]?.count || 0);
+}
+
+export async function getPlaybookCategories(companyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(playbookCategories).where(eq(playbookCategories.companyId, companyId)).orderBy(asc(playbookCategories.name));
+}
+
 export async function getPlaybookEntriesByCategory(companyId: number, categoryId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(playbookEntries)
     .where(and(
       eq(playbookEntries.companyId, companyId),
@@ -842,7 +935,7 @@ export async function getPlaybookEntriesByCategory(companyId: number, categoryId
 export async function searchPlaybookEntries(companyId: number, query: string) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select().from(playbookEntries)
     .where(and(
       eq(playbookEntries.companyId, companyId),
@@ -855,18 +948,18 @@ export async function searchPlaybookEntries(companyId: number, query: string) {
 export async function getPlaybookEntryById(id: number) {
   const db = await getDb();
   if (!db) return null;
-  
+
   const result = await db.select().from(playbookEntries)
     .where(eq(playbookEntries.id, id))
     .limit(1);
-  
+
   return result.length > 0 ? result[0] : null;
 }
 
 export async function getUserPlaybookBookmarks(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return await db.select({ entry: playbookEntries }).from(playbookBookmarks)
     .innerJoin(playbookEntries, eq(playbookBookmarks.entryId, playbookEntries.id))
     .where(eq(playbookBookmarks.userId, userId))
@@ -876,7 +969,7 @@ export async function getUserPlaybookBookmarks(userId: number) {
 export async function addPlaybookBookmark(userId: number, entryId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.insert(playbookBookmarks).values({
     userId,
     entryId,
@@ -886,7 +979,7 @@ export async function addPlaybookBookmark(userId: number, entryId: number) {
 export async function removePlaybookBookmark(userId: number, entryId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.delete(playbookBookmarks)
     .where(and(
       eq(playbookBookmarks.userId, userId),
@@ -897,35 +990,35 @@ export async function removePlaybookBookmark(userId: number, entryId: number) {
 export async function isPlaybookBookmarked(userId: number, entryId: number): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
-  
+
   const result = await db.select().from(playbookBookmarks)
     .where(and(
       eq(playbookBookmarks.userId, userId),
       eq(playbookBookmarks.entryId, entryId)
     ))
     .limit(1);
-  
+
   return result.length > 0;
 }
 
 export async function createPlaybookCategory(category: InsertPlaybookCategory) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.insert(playbookCategories).values(category);
 }
 
 export async function createPlaybookEntry(entry: InsertPlaybookEntry) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.insert(playbookEntries).values(entry);
 }
 
 export async function updatePlaybookEntry(id: number, data: Partial<InsertPlaybookEntry>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.update(playbookEntries)
     .set(data)
     .where(eq(playbookEntries.id, id));
@@ -934,7 +1027,7 @@ export async function updatePlaybookEntry(id: number, data: Partial<InsertPlaybo
 export async function deletePlaybookEntry(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.delete(playbookEntries).where(eq(playbookEntries.id, id));
 }
 

@@ -7,11 +7,7 @@ export default function SalesCoach() {
   const { user } = useAuth();
 
   return (
-    <DashboardLayout
-      navItems={[
-        { href: "/", label: "Dashboard", icon: Brain },
-      ]}
-    >
+    <DashboardLayout>
       <AISalesCoach />
     </DashboardLayout>
   );

@@ -54,7 +54,7 @@ function Router() {
       <Route path={"/route-optimization"} component={RouteOptimization} />
       <Route path="/distributors" component={Distributors} />
       <Route path="/internal-notes" component={InternalNotesHistory} />
-      <Route path="/manager-dashboard" component={ManagerDashboard} />
+      <Route path="/manager" component={ManagerDashboard} />
       <Route path={"/customers-map"} component={CustomersMap} />
       <Route path={"/photo-gallery"} component={PhotoGallery} />
       <Route path={"/predictive-analytics"} component={PredictiveAnalytics} />

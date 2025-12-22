@@ -13,9 +13,9 @@ interface RouteStop {
   customer?: {
     id: number;
     name: string;
-    latitude?: string;
-    longitude?: string;
-  };
+    latitude?: string | null;
+    longitude?: string | null;
+  } | null;
 }
 
 interface RepLocation {

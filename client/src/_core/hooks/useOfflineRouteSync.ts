@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useOnline } from "./useOnline";
+import { useOfflineStatus } from "@/hooks/useOfflineStatus";
 import {
   getRoutesOffline,
   saveRoutesOffline,
@@ -11,10 +11,10 @@ import {
 import { trpc } from "@/lib/trpc";
 
 export function useOfflineRouteSync() {
-  const isOnline = useOnline();
+  const { isOnline } = useOfflineStatus();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
-  
+
   const utils = trpc.useUtils();
   const { data: routes } = trpc.routes.list.useQuery();
 
@@ -30,7 +30,7 @@ export function useOfflineRouteSync() {
           stops: [],
           syncedAt: Date.now(),
         }));
-        
+
         saveRoutesOffline(offlineRoutes);
       } catch (error) {
         console.error("[useOfflineRouteSync] Failed to sync routes:", error);

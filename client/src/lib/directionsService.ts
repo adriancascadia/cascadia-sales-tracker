@@ -79,7 +79,7 @@ export async function getDirections(
           totalDuration: route.legs.reduce((sum, l) => sum + (l.duration?.value || 0), 0).toString(),
           totalDurationValue: route.legs.reduce((sum, l) => sum + (l.duration?.value || 0), 0),
           steps,
-          polyline: route.overview_polyline.points,
+          polyline: route.overview_polyline,
           warnings: result.routes[0].warnings || [],
         });
       } else {

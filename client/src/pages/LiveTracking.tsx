@@ -2,8 +2,8 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapView } from "@/components/Map";
 import { trpc } from "@/lib/trpc";
-import { Users, MapPin, Package, FileText, TrendingUp, Clock, Navigation, RefreshCw, X, CheckCircle2, Circle, Target } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import { MapPin, Navigation, RefreshCw, X, CheckCircle2, Circle, Target } from "lucide-react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -14,29 +14,77 @@ export default function LiveTracking() {
   });
   const { data: allUsers } = trpc.analytics.getAllUsers.useQuery();
   const { data: customers } = trpc.customers.list.useQuery();
-  const { data: allVisits } = trpc.visits.list.useQuery();
+  const { data: allVisits } = trpc.visitData.list.useQuery();
+  const { data: activeVisits } = trpc.visitData.getAllActive.useQuery(undefined, {
+    refetchInterval: 10000,
+  });
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const routeMarkersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const routePolylineRef = useRef<google.maps.Polyline | null>(null);
-  
+  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+  const trafficLayerRef = useRef<google.maps.TrafficLayer | null>(null);
+
   const { data: selectedRoute } = trpc.routes.getTodayByUser.useQuery(
     { userId: selectedUserId! },
     { enabled: !!selectedUserId }
   );
-  
+
   const { data: routeStops } = trpc.routes.getStops.useQuery(
     { routeId: selectedRoute?.id! },
     { enabled: !!selectedRoute?.id }
   );
-  
+
+  // Combine real GPS tracks with "virtual" tracks from active visits
+  // This ensures users appear on the map even if they haven't moved (GPS stale) but are checked in
+  const derivedActiveTracks = useMemo(() => {
+    const tracks = activeGpsTracks || [];
+    const visits = activeVisits || [];
+
+    // Start with all real GPS tracks
+    const allTracks = tracks.map(track => {
+      // Find if user has an active visit
+      const activeVisit = visits.find(v => v.userId === track.userId);
+      const customer = activeVisit ? customers?.find(c => c.id === activeVisit.customerId) : null;
+
+      return {
+        ...track,
+        activeCustomerName: customer?.name || null
+      };
+    });
+
+    const userIdsWithTrack = new Set(tracks.map(t => t.userId));
+
+    // Add virtual tracks for users with active visits who don't have a recent GPS track
+    visits.forEach(visit => {
+      if (!userIdsWithTrack.has(visit.userId) && visit.checkInLatitude && visit.checkInLongitude) {
+        const customer = customers?.find(c => c.id === visit.customerId);
+        allTracks.push({
+          id: -visit.id, // Negative ID to distinguish virtual track
+          userId: visit.userId,
+          companyId: visit.companyId,
+          latitude: visit.checkInLatitude,
+          longitude: visit.checkInLongitude,
+          timestamp: new Date(visit.checkInTime), // Use check-in time as "last update"
+          accuracy: 0,
+          speed: "0",
+          heading: "0",
+          isVirtual: true, // Marker flag
+          activeCustomerName: customer?.name || null
+        } as any);
+      }
+    });
+
+    return allTracks;
+  }, [activeGpsTracks, activeVisits, customers]);
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-  
+
   // Calculate distance between two GPS coordinates in meters
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3; // Earth's radius in meters
@@ -46,30 +94,30 @@ export default function LiveTracking() {
     const Δλ = (lon2 - lon1) * Math.PI / 180;
 
     const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c; // Distance in meters
   };
-  
+
   // Determine stop status based on visits and GPS proximity
   const getStopStatus = (stop: any, customer: any, userGpsTrack: any) => {
     // Check if there's a completed visit for this customer today
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
-    
-    const visit = allVisits?.find(v => 
-      v.customerId === customer.id && 
+
+    const visit = allVisits?.find(v =>
+      v.customerId === customer.id &&
       v.userId === selectedUserId &&
       new Date(v.checkInTime) >= todayStart &&
       v.checkOutTime !== null
     );
-    
+
     if (visit) {
       return 'completed';
     }
-    
+
     // Check if user is currently near this location (within 100 meters)
     if (userGpsTrack && customer.latitude && customer.longitude) {
       const distance = calculateDistance(
@@ -78,103 +126,125 @@ export default function LiveTracking() {
         parseFloat(customer.latitude),
         parseFloat(customer.longitude)
       );
-      
+
       if (distance < 100) {
         return 'active';
       }
     }
-    
+
     return 'pending';
   };
-  
+
   // Update main GPS markers
   useEffect(() => {
-    if (!mapRef.current || !activeGpsTracks || !window.google) return;
-    
+    if (!mapRef.current || !window.google) return;
+
     markersRef.current.forEach(marker => {
       marker.map = null;
     });
     markersRef.current = [];
-    
-    activeGpsTracks.forEach((track) => {
+
+    derivedActiveTracks.forEach((track) => {
       const user = allUsers?.find(u => u.id === track.userId);
       const position = {
         lat: parseFloat(track.latitude),
         lng: parseFloat(track.longitude),
       };
-      
+
       const markerContent = document.createElement('div');
       markerContent.className = 'flex flex-col items-center cursor-pointer';
+
+      const activeCustomerHtml = (track as any).activeCustomerName
+        ? `<div class="bg-yellow-100 text-yellow-800 border border-yellow-200 px-2 py-0.5 rounded text-[10px] font-bold shadow-sm mb-1 uppercase tracking-wider">
+             At: ${(track as any).activeCustomerName}
+           </div>`
+        : '';
+
       markerContent.innerHTML = `
-        <div class="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium shadow-lg mb-1 whitespace-nowrap">
-          ${user?.name || `User ${track.userId}`}
+        <div class="flex flex-col items-center">
+          ${activeCustomerHtml}
+          <div class="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium shadow-lg mb-1 whitespace-nowrap">
+            ${user?.name || `User ${track.userId}`}
+          </div>
+          <div class="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg"></div>
         </div>
-        <div class="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg"></div>
       `;
-      
+
       const marker = new google.maps.marker.AdvancedMarkerElement({
         map: mapRef.current,
         position,
         content: markerContent,
         title: user?.name || `User ${track.userId}`,
       });
-      
+
       marker.addListener('click', () => {
         setSelectedUserId(track.userId);
       });
-      
+
       markersRef.current.push(marker);
     });
-    
-    if (activeGpsTracks.length > 0 && !selectedUserId) {
+
+    if (derivedActiveTracks.length > 0 && !selectedUserId) {
       const bounds = new google.maps.LatLngBounds();
-      activeGpsTracks.forEach(track => {
+      derivedActiveTracks.forEach(track => {
         bounds.extend({
           lat: parseFloat(track.latitude),
           lng: parseFloat(track.longitude),
         });
       });
       mapRef.current.fitBounds(bounds);
-      
-      if (activeGpsTracks.length === 1) {
+
+      if (derivedActiveTracks.length === 1) {
         mapRef.current.setZoom(15);
       }
     }
-  }, [activeGpsTracks, allUsers, selectedUserId]);
-  
+  }, [derivedActiveTracks, allUsers, selectedUserId]);
+
   // Display route with progress tracking
   useEffect(() => {
     if (!mapRef.current || !window.google || !selectedRoute || !routeStops || !customers) return;
-    
+
     // Clear previous route visualization
     routeMarkersRef.current.forEach(marker => marker.map = null);
     routeMarkersRef.current = [];
     if (routePolylineRef.current) {
       routePolylineRef.current.setMap(null);
     }
-    
+    if (directionsRendererRef.current) {
+      directionsRendererRef.current.setMap(null);
+    }
+    if (trafficLayerRef.current) {
+      trafficLayerRef.current.setMap(null);
+    }
+
     const routePositions: google.maps.LatLng[] = [];
     const bounds = new google.maps.LatLngBounds();
-    const userGpsTrack = activeGpsTracks?.find(t => t.userId === selectedUserId);
-    
+    const userGpsTrack = derivedActiveTracks?.find(t => t.userId === selectedUserId);
+
+    // Initialize traffic layer if not already done
+    if (!trafficLayerRef.current) {
+      trafficLayerRef.current = new google.maps.TrafficLayer();
+    }
+    trafficLayerRef.current.setMap(mapRef.current);
+
     // Create markers for each stop with status-based styling
     routeStops.forEach((stop, index) => {
       const customer = customers.find(c => c.id === stop.customerId);
       if (!customer || !customer.latitude || !customer.longitude) return;
-      
+
       const position = {
         lat: parseFloat(customer.latitude),
         lng: parseFloat(customer.longitude),
       };
-      
+
       routePositions.push(new google.maps.LatLng(position.lat, position.lng));
       bounds.extend(position);
-      
+
       const status = getStopStatus(stop, customer, userGpsTrack);
-      
+
       const stopMarkerContent = document.createElement('div');
       stopMarkerContent.className = 'flex flex-col items-center';
-      
+
       let markerHtml = '';
       if (status === 'completed') {
         markerHtml = `
@@ -195,19 +265,19 @@ export default function LiveTracking() {
           </div>
         `;
       }
-      
+
       stopMarkerContent.innerHTML = markerHtml;
-      
+
       const stopMarker = new google.maps.marker.AdvancedMarkerElement({
         map: mapRef.current,
         position,
         content: stopMarkerContent,
         title: customer.name,
       });
-      
+
       const statusText = status === 'completed' ? 'Completed' : status === 'active' ? 'In Progress' : 'Pending';
       const statusColor = status === 'completed' ? 'green' : status === 'active' ? 'orange' : 'gray';
-      
+
       const infoWindow = new google.maps.InfoWindow({
         content: `
           <div class="p-2">
@@ -220,31 +290,81 @@ export default function LiveTracking() {
           </div>
         `,
       });
-      
+
       stopMarker.addListener('click', () => {
         infoWindow.open(mapRef.current, stopMarker);
       });
-      
+
       routeMarkersRef.current.push(stopMarker);
     });
-    
-    // Draw polyline connecting stops
-    if (routePositions.length > 0) {
-      const polyline = new google.maps.Polyline({
-        path: routePositions,
-        geodesic: true,
-        strokeColor: '#3B82F6',
-        strokeOpacity: 0.8,
-        strokeWeight: 3,
-        map: mapRef.current,
-      });
-      routePolylineRef.current = polyline;
-      
-      // Fit map to show entire route
+
+    // Draw road-based route connecting stops
+    if (routePositions.length >= 2) {
+      const directionsService = new google.maps.DirectionsService();
+
+      // Initialize or reuse DirectionsRenderer
+      if (!directionsRendererRef.current) {
+        directionsRendererRef.current = new google.maps.DirectionsRenderer({
+          map: mapRef.current,
+          suppressMarkers: true, // We use our own custom markers
+          polylineOptions: {
+            strokeColor: '#3B82F6',
+            strokeOpacity: 0.8,
+            strokeWeight: 5,
+          }
+        });
+      } else {
+        directionsRendererRef.current.setMap(mapRef.current);
+      }
+
+      const origin = routePositions[0];
+      const destination = routePositions[routePositions.length - 1];
+      const waypoints = routePositions.slice(1, -1).map(pos => ({
+        location: pos,
+        stopover: true,
+      }));
+
+      directionsService.route(
+        {
+          origin,
+          destination,
+          waypoints,
+          travelMode: google.maps.TravelMode.DRIVING,
+          drivingOptions: {
+            departureTime: new Date(),
+            trafficModel: google.maps.TrafficModel.BEST_GUESS,
+          }
+        },
+        (result, status) => {
+          if (status === google.maps.DirectionsStatus.OK && result) {
+            directionsRendererRef.current?.setDirections(result);
+          } else {
+            console.error('Directions request failed due to ' + status);
+            // Fallback to simple polyline if directions fail (e.g. over query limit or no route found)
+            const polyline = new google.maps.Polyline({
+              path: routePositions,
+              geodesic: true,
+              strokeColor: '#3B82F6',
+              strokeOpacity: 0.8,
+              strokeWeight: 3,
+              map: mapRef.current,
+            });
+            routePolylineRef.current = polyline;
+          }
+        }
+      );
+    } else if (routePositions.length === 1) {
+      // Just center on the single stop
+      mapRef.current.panTo(routePositions[0]);
+      mapRef.current.setZoom(14);
+    }
+
+    // Fit map to show entire route (handled by directionsRenderer usually, but good to have as backup or for single points)
+    if (routePositions.length > 0 && !directionsRendererRef.current) {
       mapRef.current.fitBounds(bounds);
     }
-  }, [selectedRoute, routeStops, customers, activeGpsTracks, selectedUserId, allVisits]);
-  
+  }, [selectedRoute, routeStops, customers, derivedActiveTracks, selectedUserId, allVisits]);
+
   const getTimeSince = (dateString: string | Date) => {
     const diff = currentTime.getTime() - new Date(dateString).getTime();
     const minutes = Math.floor(diff / 60000);
@@ -253,11 +373,11 @@ export default function LiveTracking() {
     const hours = Math.floor(minutes / 60);
     return `${hours}h ${minutes % 60}m ago`;
   };
-  
+
   const handleRefresh = () => {
     refetch();
   };
-  
+
   const handleClearRoute = () => {
     setSelectedUserId(null);
     routeMarkersRef.current.forEach(marker => marker.map = null);
@@ -266,10 +386,10 @@ export default function LiveTracking() {
       routePolylineRef.current.setMap(null);
     }
   };
-  
+
   const getInitialCenter = () => {
-    if (activeGpsTracks && activeGpsTracks.length > 0) {
-      const firstTrack = activeGpsTracks[0];
+    if (derivedActiveTracks && derivedActiveTracks.length > 0) {
+      const firstTrack = derivedActiveTracks[0];
       return {
         lat: parseFloat(firstTrack.latitude),
         lng: parseFloat(firstTrack.longitude),
@@ -277,10 +397,10 @@ export default function LiveTracking() {
     }
     return { lat: 39.8283, lng: -98.5795 };
   };
-  
+
   const selectedUser = allUsers?.find(u => u.id === selectedUserId);
-  const userGpsTrack = activeGpsTracks?.find(t => t.userId === selectedUserId);
-  
+  const userGpsTrack = derivedActiveTracks?.find(t => t.userId === selectedUserId);
+
   // Calculate route progress
   const routeProgress = routeStops && customers && userGpsTrack ? routeStops.map(stop => {
     const customer = customers.find(c => c.id === stop.customerId);
@@ -291,24 +411,13 @@ export default function LiveTracking() {
       status: getStopStatus(stop, customer, userGpsTrack),
     };
   }).filter(Boolean) : [];
-  
+
   const completedStops = routeProgress.filter(p => p?.status === 'completed').length;
   const totalStops = routeProgress.length;
   const progressPercentage = totalStops > 0 ? (completedStops / totalStops) * 100 : 0;
 
   return (
-    <DashboardLayout
-      navItems={[
-        { href: "/", label: "Dashboard", icon: TrendingUp },
-        { href: "/customers", label: "Customers", icon: Users },
-        { href: "/routes", label: "Routes", icon: MapPin },
-        { href: "/visits", label: "Visits", icon: Clock },
-        { href: "/orders", label: "Orders", icon: Package },
-        { href: "/products", label: "Products", icon: Package },
-        { href: "/tracking", label: "Live Tracking", icon: MapPin },
-        { href: "/reports", label: "Reports", icon: FileText },
-      ]}
-    >
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -328,7 +437,7 @@ export default function LiveTracking() {
             </Button>
           </div>
         </div>
-        
+
         {selectedUserId && selectedRoute && (
           <div className="grid gap-4 md:grid-cols-2">
             <Card className="border-primary">
@@ -351,7 +460,7 @@ export default function LiveTracking() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle>Route Progress</CardTitle>
@@ -381,13 +490,13 @@ export default function LiveTracking() {
             </Card>
           </div>
         )}
-        
+
         <Card className="overflow-hidden">
           <CardContent className="p-0">
             <div className="h-[600px] w-full">
               <MapView
                 initialCenter={getInitialCenter()}
-                initialZoom={activeGpsTracks && activeGpsTracks.length > 0 ? 12 : 4}
+                initialZoom={derivedActiveTracks && derivedActiveTracks.length > 0 ? 12 : 4}
                 onMapReady={(map) => {
                   mapRef.current = map;
                 }}
@@ -395,20 +504,20 @@ export default function LiveTracking() {
             </div>
           </CardContent>
         </Card>
-        
+
         <div>
           <h2 className="text-xl font-semibold mb-4">
-            Active Sales Reps ({activeGpsTracks?.length || 0})
+            Active Sales Reps ({derivedActiveTracks?.length || 0})
           </h2>
-          
+
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {activeGpsTracks && activeGpsTracks.length > 0 ? (
-              activeGpsTracks.map((track) => {
+            {derivedActiveTracks && derivedActiveTracks.length > 0 ? (
+              derivedActiveTracks.map((track) => {
                 const user = allUsers?.find(u => u.id === track.userId);
                 const isSelected = selectedUserId === track.userId;
                 return (
-                  <Card 
-                    key={track.id} 
+                  <Card
+                    key={track.id}
                     className={`cursor-pointer transition-all ${isSelected ? 'border-primary shadow-md' : 'hover:shadow-md'}`}
                     onClick={() => setSelectedUserId(track.userId)}
                   >
@@ -427,6 +536,9 @@ export default function LiveTracking() {
                             {parseFloat(track.latitude).toFixed(4)}, {parseFloat(track.longitude).toFixed(4)}
                           </span>
                         </div>
+                        {(track as any).isVirtual && (
+                          <Badge variant="secondary" className="mb-2">Checked In (GPS Idle)</Badge>
+                        )}
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Last Update:</span>
                           <span>{getTimeSince(track.timestamp)}</span>

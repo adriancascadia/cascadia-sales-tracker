@@ -17,6 +17,7 @@ import {
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Smartphone, Fingerprint, MapPin, Bell, Download, Zap } from "lucide-react";
 import { toast } from "sonner";
+import DashboardLayout from "@/components/DashboardLayout";
 
 export default function MobileSettings() {
   const { user } = useAuth();
@@ -58,7 +59,7 @@ export default function MobileSettings() {
         setBiometricRegistered(false);
         toast.success("Biometric authentication disabled");
       } else {
-        const result = await registerBiometric(user?.id || "");
+        const result = await registerBiometric(user?.id.toString() || "");
         if (result.success) {
           setBiometricRegistered(true);
           toast.success("Biometric authentication enabled");
@@ -147,242 +148,244 @@ export default function MobileSettings() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center gap-3">
-        <Smartphone className="h-8 w-8 text-blue-600" />
-        <div>
-          <h1 className="text-3xl font-bold">Mobile Settings</h1>
-          <p className="text-muted-foreground">Configure mobile app features and permissions</p>
+    <DashboardLayout>
+      <div className="space-y-6 p-6">
+        <div className="flex items-center gap-3">
+          <Smartphone className="h-8 w-8 text-blue-600" />
+          <div>
+            <h1 className="text-3xl font-bold">Mobile Settings</h1>
+            <p className="text-muted-foreground">Configure mobile app features and permissions</p>
+          </div>
         </div>
-      </div>
 
-      <div className="grid gap-6">
-        {/* Biometric Authentication */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Fingerprint className="h-5 w-5 text-blue-600" />
-                <div>
-                  <CardTitle>Biometric Authentication</CardTitle>
-                  <CardDescription>Use fingerprint or face recognition to unlock</CardDescription>
+        <div className="grid gap-6">
+          {/* Biometric Authentication */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Fingerprint className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <CardTitle>Biometric Authentication</CardTitle>
+                    <CardDescription>Use fingerprint or face recognition to unlock</CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {biometricAvailable ? (
+                    <Badge variant="outline" className="bg-green-50">
+                      Available
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-gray-50">
+                      Not Available
+                    </Badge>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                {biometricAvailable ? (
-                  <Badge variant="outline" className="bg-green-50">
-                    Available
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-gray-50">
-                    Not Available
-                  </Badge>
-                )}
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {biometricRegistered
+                    ? "Biometric authentication is enabled"
+                    : "Enable biometric authentication for faster login"}
+                </p>
+                <Switch
+                  checked={biometricRegistered}
+                  onCheckedChange={handleBiometricToggle}
+                  disabled={!biometricAvailable || isLoading}
+                />
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                {biometricRegistered
-                  ? "Biometric authentication is enabled"
-                  : "Enable biometric authentication for faster login"}
-              </p>
-              <Switch
-                checked={biometricRegistered}
-                onCheckedChange={handleBiometricToggle}
-                disabled={!biometricAvailable || isLoading}
-              />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Location Permission */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-green-600" />
-                <div>
-                  <CardTitle>Location Permission</CardTitle>
-                  <CardDescription>Allow app to access your location</CardDescription>
+          {/* Location Permission */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-green-600" />
+                  <div>
+                    <CardTitle>Location Permission</CardTitle>
+                    <CardDescription>Allow app to access your location</CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {locationPermission ? (
+                    <Badge variant="outline" className="bg-green-50">
+                      Granted
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-yellow-50">
+                      Not Granted
+                    </Badge>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                {locationPermission ? (
-                  <Badge variant="outline" className="bg-green-50">
-                    Granted
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-yellow-50">
-                    Not Granted
-                  </Badge>
-                )}
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {locationPermission
+                    ? "Location permission is granted"
+                    : "Grant location permission to enable GPS tracking"}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLocationPermission}
+                  disabled={locationPermission || isLoading}
+                >
+                  {locationPermission ? "Granted" : "Request"}
+                </Button>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                {locationPermission
-                  ? "Location permission is granted"
-                  : "Grant location permission to enable GPS tracking"}
+            </CardContent>
+          </Card>
+
+          {/* Background Location Tracking */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Zap className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <CardTitle>Background Tracking</CardTitle>
+                    <CardDescription>Continuous GPS tracking during field work</CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {backgroundTracking ? (
+                    <Badge className="bg-purple-100 text-purple-800">Active</Badge>
+                  ) : (
+                    <Badge variant="outline">Inactive</Badge>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    {backgroundTracking
+                      ? "Background tracking is active"
+                      : "Enable background tracking for automatic route logging"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Note: Requires location permission
+                  </p>
+                </div>
+                <Switch
+                  checked={backgroundTracking}
+                  onCheckedChange={handleBackgroundTracking}
+                  disabled={!locationPermission || isLoading}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Push Notifications */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Bell className="h-5 w-5 text-orange-600" />
+                  <div>
+                    <CardTitle>Push Notifications</CardTitle>
+                    <CardDescription>Receive alerts and reminders on your device</CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {pushNotifications ? (
+                    <Badge variant="outline" className="bg-green-50">
+                      Enabled
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-gray-50">
+                      Disabled
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {pushNotifications
+                    ? "Push notifications are enabled"
+                    : "Enable push notifications for important alerts"}
+                </p>
+                <Switch
+                  checked={pushNotifications}
+                  onCheckedChange={handlePushNotifications}
+                  disabled={isLoading}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* App Installation */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Download className="h-5 w-5 text-blue-600" />
+                <div>
+                  <CardTitle>Install App</CardTitle>
+                  <CardDescription>Install SalesForce Tracker as a native app</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Install the app on your home screen for quick access and offline support.
               </p>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLocationPermission}
-                disabled={locationPermission || isLoading}
+                className="w-full"
+                onClick={() => {
+                  if ("serviceWorker" in navigator) {
+                    // Trigger install prompt if available
+                    window.dispatchEvent(new Event("beforeinstallprompt"));
+                    toast.success("Install prompt triggered");
+                  }
+                }}
               >
-                {locationPermission ? "Granted" : "Request"}
+                <Download className="mr-2 h-4 w-4" />
+                Install App
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Background Location Tracking */}
-        <Card>
+        {/* Info Section */}
+        <Card className="bg-blue-50 border-blue-200">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Zap className="h-5 w-5 text-purple-600" />
-                <div>
-                  <CardTitle>Background Tracking</CardTitle>
-                  <CardDescription>Continuous GPS tracking during field work</CardDescription>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {backgroundTracking ? (
-                  <Badge className="bg-purple-100 text-purple-800">Active</Badge>
-                ) : (
-                  <Badge variant="outline">Inactive</Badge>
-                )}
-              </div>
-            </div>
+            <CardTitle className="text-base">Mobile App Features</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  {backgroundTracking
-                    ? "Background tracking is active"
-                    : "Enable background tracking for automatic route logging"}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Note: Requires location permission
-                </p>
-              </div>
-              <Switch
-                checked={backgroundTracking}
-                onCheckedChange={handleBackgroundTracking}
-                disabled={!locationPermission || isLoading}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Push Notifications */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Bell className="h-5 w-5 text-orange-600" />
-                <div>
-                  <CardTitle>Push Notifications</CardTitle>
-                  <CardDescription>Receive alerts and reminders on your device</CardDescription>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {pushNotifications ? (
-                  <Badge variant="outline" className="bg-green-50">
-                    Enabled
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-gray-50">
-                    Disabled
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                {pushNotifications
-                  ? "Push notifications are enabled"
-                  : "Enable push notifications for important alerts"}
-              </p>
-              <Switch
-                checked={pushNotifications}
-                onCheckedChange={handlePushNotifications}
-                disabled={isLoading}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* App Installation */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Download className="h-5 w-5 text-blue-600" />
-              <div>
-                <CardTitle>Install App</CardTitle>
-                <CardDescription>Install SalesForce Tracker as a native app</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Install the app on your home screen for quick access and offline support.
-            </p>
-            <Button
-              className="w-full"
-              onClick={() => {
-                if ("serviceWorker" in navigator) {
-                  // Trigger install prompt if available
-                  window.dispatchEvent(new Event("beforeinstallprompt"));
-                  toast.success("Install prompt triggered");
-                }
-              }}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Install App
-            </Button>
+            <ul className="space-y-2 text-sm">
+              <li className="flex gap-2">
+                <span className="text-blue-600">✓</span>
+                <span>Offline-first functionality - work without internet</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-blue-600">✓</span>
+                <span>Automatic sync when connection returns</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-blue-600">✓</span>
+                <span>Fast biometric login with fingerprint or face</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-blue-600">✓</span>
+                <span>Background GPS tracking for route optimization</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-blue-600">✓</span>
+                <span>Push notifications for important alerts</span>
+              </li>
+            </ul>
           </CardContent>
         </Card>
       </div>
-
-      {/* Info Section */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardHeader>
-          <CardTitle className="text-base">Mobile App Features</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-2 text-sm">
-            <li className="flex gap-2">
-              <span className="text-blue-600">✓</span>
-              <span>Offline-first functionality - work without internet</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-blue-600">✓</span>
-              <span>Automatic sync when connection returns</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-blue-600">✓</span>
-              <span>Fast biometric login with fingerprint or face</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-blue-600">✓</span>
-              <span>Background GPS tracking for route optimization</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-blue-600">✓</span>
-              <span>Push notifications for important alerts</span>
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-    </div>
+    </DashboardLayout>
   );
 }

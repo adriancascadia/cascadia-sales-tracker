@@ -10,9 +10,9 @@ interface RouteStop {
   customer?: {
     id: number;
     name: string;
-    address?: string;
-    city?: string;
-  };
+    address?: string | null;
+    city?: string | null;
+  } | null;
 }
 
 interface RouteProgressProps {
@@ -90,13 +90,12 @@ export default function RouteProgress({
                 <div key={stop.id} className="flex items-start gap-4">
                   <div className="flex flex-col items-center">
                     <div
-                      className={`rounded-full p-2 ${
-                        isCompleted
+                      className={`rounded-full p-2 ${isCompleted
                           ? "bg-green-100 text-green-600"
                           : isCurrent
-                          ? "bg-blue-100 text-blue-600 animate-pulse"
-                          : "bg-gray-100 text-gray-400"
-                      }`}
+                            ? "bg-blue-100 text-blue-600 animate-pulse"
+                            : "bg-gray-100 text-gray-400"
+                        }`}
                     >
                       {isCompleted ? (
                         <CheckCircle className="h-5 w-5" />
@@ -106,9 +105,8 @@ export default function RouteProgress({
                     </div>
                     {index < stops.length - 1 && (
                       <div
-                        className={`w-0.5 h-12 mt-2 ${
-                          isCompleted ? "bg-green-200" : "bg-gray-200"
-                        }`}
+                        className={`w-0.5 h-12 mt-2 ${isCompleted ? "bg-green-200" : "bg-gray-200"
+                          }`}
                       />
                     )}
                   </div>

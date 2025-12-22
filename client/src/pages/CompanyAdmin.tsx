@@ -104,13 +104,13 @@ export default function CompanyAdmin() {
                 <p className="text-lg font-semibold">{companyInfo.name}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600">Email Domains</label>
+                <label className="text-sm font-medium text-gray-600">Company Domain</label>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {companyInfo.emailDomains?.map((domain: string) => (
-                    <span key={domain} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                      {domain}
+                  {companyInfo.domain && (
+                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                      {companyInfo.domain}
                     </span>
-                  ))}
+                  )}
                 </div>
               </div>
               <div>

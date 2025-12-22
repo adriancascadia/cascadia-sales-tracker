@@ -31,6 +31,9 @@ importers:
       '@capacitor/core':
         specifier: ^8.0.0
         version: 8.0.0
+      '@capacitor/geolocation':
+        specifier: ^8.0.0
+        version: 8.0.0(@capacitor/core@8.0.0)
       '@capacitor/ios':
         specifier: ^8.0.0
         version: 8.0.0(@capacitor/core@8.0.0)
@@ -710,10 +713,18 @@ packages:
   '@capacitor/core@8.0.0':
     resolution: {integrity: sha512-250HTVd/W/KdMygoqaedisvNbHbpbQTN2Hy/8ZYGm1nAqE0Fx7sGss4l0nDg33STxEdDhtVRoL2fIaaiukKseA==}
 
+  '@capacitor/geolocation@8.0.0':
+    resolution: {integrity: sha512-ci6gOWd5/uruC3bRTxI3xFd9g82WnnJbdQxOH3oZOATNuedlaAw5c5/zXEIMYfRB7t2x1v8/N9gXkND6/nOmVQ==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
+
   '@capacitor/ios@8.0.0':
     resolution: {integrity: sha512-gwSn6X4uHYNHlM8zZmVmM1zjEhexxbHpPSSnH1DZkp8o3zdK/RmH8tmDma+3zPZrhhTSrMC7sT24dKTOvV8www==}
     peerDependencies:
       '@capacitor/core': ^8.0.0
+
+  '@capacitor/synapse@1.0.4':
+    resolution: {integrity: sha512-/C1FUo8/OkKuAT4nCIu/34ny9siNHr9qtFezu4kxm6GY1wNFxrCFWjfYx5C1tUhVGz3fxBABegupkpjXvjCHrw==}
 
   '@chevrotain/cst-dts-gen@11.0.3':
     resolution: {integrity: sha512-BvIKpRLeS/8UbfxXxgC33xOumsacaeCKAjAeLyOn7Pcp95HiRbrpl14S+9vaZLolnbssPIUuiUd8IvgkRyt6NQ==}
@@ -6155,9 +6166,16 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
+  '@capacitor/geolocation@8.0.0(@capacitor/core@8.0.0)':
+    dependencies:
+      '@capacitor/core': 8.0.0
+      '@capacitor/synapse': 1.0.4
+
   '@capacitor/ios@8.0.0(@capacitor/core@8.0.0)':
     dependencies:
       '@capacitor/core': 8.0.0
+
+  '@capacitor/synapse@1.0.4': {}
 
   '@chevrotain/cst-dts-gen@11.0.3':
     dependencies:

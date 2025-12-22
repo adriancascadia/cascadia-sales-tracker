@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Users, MapPin, Package, FileText, TrendingUp, Clock, Plus, Search, Edit, Trash2, Phone, Mail, MapPinIcon, Upload, Download, Bell, User, History } from "lucide-react";
+import { Users, Plus, Search, Edit, Trash2, Phone, Mail, MapPinIcon, Upload, Download, User, History } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
@@ -17,10 +17,10 @@ export default function Customers() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
   const [importPreview, setImportPreview] = useState<any[]>([]);
-  
+
   const utils = trpc.useUtils();
   const { data: customers, isLoading } = trpc.customers.list.useQuery();
-  
+
   const createMutation = trpc.customers.create.useMutation({
     onSuccess: () => {
       utils.customers.list.invalidate();
@@ -31,7 +31,7 @@ export default function Customers() {
       toast.error("Failed to create customer: " + error.message);
     },
   });
-  
+
   const updateMutation = trpc.customers.update.useMutation({
     onSuccess: () => {
       utils.customers.list.invalidate();
@@ -42,7 +42,7 @@ export default function Customers() {
       toast.error("Failed to update customer: " + error.message);
     },
   });
-  
+
   const deleteMutation = trpc.customers.delete.useMutation({
     onSuccess: () => {
       utils.customers.list.invalidate();
@@ -52,7 +52,7 @@ export default function Customers() {
       toast.error("Failed to delete customer: " + error.message);
     },
   });
-  
+
   const bulkImportMutation = trpc.customers.bulkImport.useMutation({
     onSuccess: (result) => {
       toast.success(`Import complete: ${result.success} succeeded, ${result.failed} failed`);
@@ -67,7 +67,7 @@ export default function Customers() {
       toast.error(`Import failed: ${error.message}`);
     },
   });
-  
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -82,14 +82,14 @@ export default function Customers() {
       contactPerson: formData.get("contactPerson") as string,
       notes: formData.get("notes") as string,
     };
-    
+
     if (editingCustomer) {
       updateMutation.mutate({ id: editingCustomer.id, ...data });
     } else {
       createMutation.mutate(data);
     }
   };
-  
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -102,19 +102,38 @@ export default function Customers() {
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
-        
-        const mapped = data.map((row: any) => ({
-          name: row.Name || row.name || "",
-          address: row.Address || row.address || "",
-          city: row.City || row.city || "",
-          state: row.State || row.state || "",
-          zipCode: row['Zip Code'] || row.zipCode || row['ZIP'] || "",
-          phone: row.Phone || row.phone || row.Telephone || row.telephone || "",
-          email: row.Email || row.email || "",
-          contactPerson: row['Contact Person'] || row.contactPerson || row.Contact || row.contact || "",
-          notes: row.Notes || row.notes || "",
-        }));
-        
+
+        const safeString = (val: any) => {
+          if (val === null || val === undefined) return "";
+          return String(val).trim();
+        };
+
+        const normalizeKeys = (obj: any) => {
+          const newObj: any = {};
+          Object.keys(obj).forEach(key => {
+            // Aggressive normalization: remove all non-alphanumeric characters and lowercase
+            const normalizedKey = key.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+            newObj[normalizedKey] = obj[key];
+          });
+          return newObj;
+        };
+
+        const mapped = data.map((rawRow: any) => {
+          const row = normalizeKeys(rawRow);
+          return {
+            // Check formatted keys: name, customername, etc.
+            name: safeString(row.name || row.customername || row.customer || rawRow.Name),
+            address: safeString(row.address || row.addr || row.streetaddress),
+            city: safeString(row.city || row.town),
+            state: safeString(row.state || row.province),
+            zipCode: safeString(row.zipcode || row.zip || row.postalcode || row.zipcode),
+            phone: safeString(row.phone || row.phonenumber || row.telephone || row.mobile || row.cell),
+            email: safeString(row.email || row.emailaddress || row.mail),
+            contactPerson: safeString(row.contactperson || row.contact || row.contactname || row.person),
+            notes: safeString(row.notes || row.comments || row.description || row.note),
+          };
+        });
+
         setImportPreview(mapped);
         toast.success(`Loaded ${mapped.length} customers from file`);
       } catch (error) {
@@ -147,14 +166,14 @@ export default function Customers() {
         Notes: "VIP customer",
       }
     ];
-    
+
     const ws = XLSX.utils.json_to_sheet(template);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Customers");
     XLSX.writeFile(wb, "customer_import_template.xlsx");
     toast.success("Template downloaded");
   };
-  
+
   const filteredCustomers = customers?.filter(customer =>
     customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     customer.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -163,26 +182,14 @@ export default function Customers() {
   );
 
   return (
-    <DashboardLayout
-      navItems={[
-        { href: "/", label: "Dashboard", icon: TrendingUp },
-        { href: "/customers", label: "Customers", icon: Users },
-        { href: "/routes", label: "Routes", icon: MapPin },
-        { href: "/visits", label: "Visits", icon: Clock },
-        { href: "/orders", label: "Orders", icon: Package },
-        { href: "/products", label: "Products", icon: Package },
-        { href: "/tracking", label: "Live Tracking", icon: MapPin },
-        { href: "/alerts", label: "Alerts", icon: Bell },
-        { href: "/reports", label: "Reports", icon: FileText },
-      ]}
-    >
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Customers</h1>
             <p className="text-muted-foreground">Manage your customer accounts</p>
           </div>
-          
+
           <div className="flex gap-2">
             <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
               <DialogTrigger asChild>
@@ -208,7 +215,7 @@ export default function Customers() {
                       Download the template to see the required format
                     </p>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="file-upload">Upload File</Label>
                     <Input
@@ -219,7 +226,7 @@ export default function Customers() {
                       className="mt-2"
                     />
                   </div>
-                  
+
                   {importPreview.length > 0 && (
                     <div>
                       <h3 className="font-semibold mb-2">Preview ({importPreview.length} customers)</h3>
@@ -252,7 +259,7 @@ export default function Customers() {
                       )}
                     </div>
                   )}
-                  
+
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
                       Cancel
@@ -264,7 +271,7 @@ export default function Customers() {
                 </div>
               </DialogContent>
             </Dialog>
-            
+
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -285,17 +292,17 @@ export default function Customers() {
                       <Label htmlFor="name">Customer Name *</Label>
                       <Input id="name" name="name" required />
                     </div>
-                    
+
                     <div className="grid gap-2">
                       <Label htmlFor="contactPerson">Contact Person</Label>
                       <Input id="contactPerson" name="contactPerson" />
                     </div>
-                    
+
                     <div className="grid gap-2">
                       <Label htmlFor="address">Address</Label>
                       <Input id="address" name="address" />
                     </div>
-                    
+
                     <div className="grid grid-cols-3 gap-4">
                       <div className="grid gap-2">
                         <Label htmlFor="city">City</Label>
@@ -310,7 +317,7 @@ export default function Customers() {
                         <Input id="zipCode" name="zipCode" />
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">
                         <Label htmlFor="phone">Phone</Label>
@@ -321,7 +328,7 @@ export default function Customers() {
                         <Input id="email" name="email" type="email" />
                       </div>
                     </div>
-                    
+
                     <div className="grid gap-2">
                       <Label htmlFor="notes">Notes</Label>
                       <Textarea id="notes" name="notes" rows={3} />
@@ -340,7 +347,7 @@ export default function Customers() {
             </Dialog>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -352,7 +359,7 @@ export default function Customers() {
             />
           </div>
         </div>
-        
+
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
@@ -401,17 +408,17 @@ export default function Customers() {
                                 <Label htmlFor="edit-name">Customer Name *</Label>
                                 <Input id="edit-name" name="name" defaultValue={customer.name} required />
                               </div>
-                              
+
                               <div className="grid gap-2">
                                 <Label htmlFor="edit-contactPerson">Contact Person</Label>
                                 <Input id="edit-contactPerson" name="contactPerson" defaultValue={customer.contactPerson || ""} />
                               </div>
-                              
+
                               <div className="grid gap-2">
                                 <Label htmlFor="edit-address">Address</Label>
                                 <Input id="edit-address" name="address" defaultValue={customer.address || ""} />
                               </div>
-                              
+
                               <div className="grid grid-cols-3 gap-4">
                                 <div className="grid gap-2">
                                   <Label htmlFor="edit-city">City</Label>
@@ -426,7 +433,7 @@ export default function Customers() {
                                   <Input id="edit-zipCode" name="zipCode" defaultValue={customer.zipCode || ""} />
                                 </div>
                               </div>
-                              
+
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">
                                   <Label htmlFor="edit-phone">Phone</Label>
@@ -437,7 +444,7 @@ export default function Customers() {
                                   <Input id="edit-email" name="email" type="email" defaultValue={customer.email || ""} />
                                 </div>
                               </div>
-                              
+
                               <div className="grid gap-2">
                                 <Label htmlFor="edit-notes">Notes</Label>
                                 <Textarea id="edit-notes" name="notes" rows={3} defaultValue={customer.notes || ""} />
@@ -454,7 +461,7 @@ export default function Customers() {
                           </form>
                         </DialogContent>
                       </Dialog>
-                      
+
                       <Button
                         variant="ghost"
                         size="icon"

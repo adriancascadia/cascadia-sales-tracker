@@ -2,8 +2,9 @@ import { createTRPCReact } from "@trpc/react-query";
 import { httpBatchLink } from "@trpc/client";
 import { QueryClient } from "@tanstack/react-query";
 import type { AppRouter } from "../../../server/routers";
+import superjson from "superjson";
 
-const getBackendUrl = ( ) => {
+const getBackendUrl = () => {
   // En producción, usa VITE_BACKEND_URL
   if (import.meta.env.VITE_BACKEND_URL) {
     return import.meta.env.VITE_BACKEND_URL;
@@ -19,15 +20,15 @@ const queryClient = new QueryClient({
       gcTime: 10 * 60 * 1000, // 10 minutos
     },
   },
-} );
+});
 
 export const trpc = createTRPCReact<AppRouter>();
 
 export const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: `${getBackendUrl( )}/api/trpc`,
-      credentials: "include", // Incluye cookies
+      url: `${getBackendUrl()}/api/trpc`,
+      transformer: superjson,
     }),
   ],
 });

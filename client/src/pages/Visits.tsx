@@ -29,9 +29,7 @@ import { trpc } from "@/lib/trpc";
 import {
   Users,
   MapPin,
-  Package,
   FileText,
-  TrendingUp,
   Clock,
   LogIn,
   LogOut,
@@ -41,6 +39,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { LocationService } from "@/lib/location";
 
 export default function Visits() {
   const [isCheckInDialogOpen, setIsCheckInDialogOpen] = useState(false);
@@ -58,22 +57,24 @@ export default function Visits() {
   const { data: activeVisit } = trpc.visitData.getActive.useQuery();
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        position => {
-          setCurrentLocation({
-            latitude: position.coords.latitude.toString(),
-            longitude: position.coords.longitude.toString(),
-          });
-        },
-        error => {
-          console.error("Error getting location:", error);
-          toast.error(
-            "Unable to get GPS location. Please enable location services."
-          );
-        }
-      );
-    }
+    const fetchLocation = async () => {
+      try {
+        // Request permissions first
+        await LocationService.requestPermissions();
+        const position = await LocationService.getCurrentPosition();
+        setCurrentLocation({
+          latitude: position.latitude.toString(),
+          longitude: position.longitude.toString(),
+        });
+      } catch (error) {
+        console.error("Error getting location:", error);
+        toast.error(
+          "Unable to get GPS location. Please enable location services."
+        );
+      }
+    };
+
+    fetchLocation();
   }, []);
 
   const checkInMutation = trpc.visitData.checkIn.useMutation({
@@ -172,41 +173,30 @@ export default function Visits() {
     return new Date(dateString).toLocaleString();
   };
 
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [visitPhoto, setVisitPhoto] = useState<File | null>(null);
   const [visitPhotoPreview, setVisitPhotoPreview] = useState<string | null>(null);
 
   const handleButtonClick = () => {
-    fileInputRef.current.click();
+    fileInputRef.current?.click();
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-  const file = event.target.files?.[0] ?? null;
-  setVisitPhoto(file);
+    const file = event.target.files?.[0] ?? null;
+    setVisitPhoto(file);
 
-  // preview (opcional)
-  if (file) {
-    const url = URL.createObjectURL(file);
-    setVisitPhotoPreview(url);
-  } else {
-    setVisitPhotoPreview(null);
-  }
-};
+    // preview (opcional)
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setVisitPhotoPreview(url);
+    } else {
+      setVisitPhotoPreview(null);
+    }
+  };
 
 
   return (
-    <DashboardLayout
-      navItems={[
-        { href: "/", label: "Dashboard", icon: TrendingUp },
-        { href: "/customers", label: "Customers", icon: Users },
-        { href: "/routes", label: "Routes", icon: MapPin },
-        { href: "/visits", label: "Visits", icon: Clock },
-        { href: "/orders", label: "Orders", icon: Package },
-        { href: "/products", label: "Products", icon: Package },
-        { href: "/tracking", label: "Live Tracking", icon: MapPin },
-        { href: "/reports", label: "Reports", icon: FileText },
-      ]}
-    >
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
