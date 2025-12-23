@@ -40,7 +40,7 @@ queryClient.getMutationCache().subscribe(event => {
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: `${window.location.protocol}//${window.location.host}/api/trpc`,
+      url: "https://cascadia-sales-tracker-production-4868.up.railway.app/api/trpc",
       transformer: superjson,
       fetch(input, init) {
         // Get JWT token from localStorage
