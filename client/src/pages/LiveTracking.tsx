@@ -154,17 +154,10 @@ export default function LiveTracking() {
       const markerContent = document.createElement('div');
       markerContent.className = 'flex flex-col items-center cursor-pointer';
 
-      const activeCustomerHtml = (track as any).activeCustomerName
-        ? `<div class="bg-yellow-100 text-yellow-800 border border-yellow-200 px-2 py-0.5 rounded text-[10px] font-bold shadow-sm mb-1 uppercase tracking-wider">
-             At: ${(track as any).activeCustomerName}
-           </div>`
-        : '';
-
       markerContent.innerHTML = `
         <div class="flex flex-col items-center">
-          ${activeCustomerHtml}
           <div class="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium shadow-lg mb-1 whitespace-nowrap">
-            ${user?.name || `User ${track.userId}`}
+            ${(track as any).activeCustomerName}
           </div>
           <div class="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg"></div>
         </div>
@@ -524,7 +517,7 @@ export default function LiveTracking() {
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2">
                         <Navigation className="h-5 w-5 text-primary" />
-                        {user?.name || `User ${track.userId}`}
+                        {(track as any).activeCustomerName}
                         {isSelected && <Badge variant="default">Viewing Route</Badge>}
                       </CardTitle>
                     </CardHeader>
