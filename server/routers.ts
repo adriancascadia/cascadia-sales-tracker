@@ -16,6 +16,7 @@ import { aiCoachRouter } from "./aiCoachRoutes";
 import { hubspotRouter } from "./hubspotRoutes";
 import { gpsTrackingRouter } from "./routers_gps";
 import { playbookRouter } from "./playbookRoutes";
+import { geocodeAddress } from "./services/geocodingService";
 
 // ============= CUSTOMER ROUTER =============
 
@@ -47,8 +48,22 @@ const customerRouter = router({
       notes: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      let { latitude, longitude } = input;
+
+      // Auto-geocode if coordinates are missing but address is present
+      // Auto-geocode if coordinates are missing but address is present
+      if ((!latitude || !longitude) && (input.address || input.city || input.state || input.zipCode)) {
+        const coords = await geocodeAddress(input.address, input.city, input.state, input.zipCode);
+        if (coords) {
+          latitude = coords.lat.toString();
+          longitude = coords.lng.toString();
+        }
+      }
+
       await db.createCustomer({
         ...input,
+        latitude,
+        longitude,
         companyId: ctx.user.companyId,
         userId: ctx.user.id,
       });
@@ -71,6 +86,34 @@ const customerRouter = router({
     }))
     .mutation(async ({ input }) => {
       const { id, ...data } = input;
+
+      // Auto-geocode if address is being updated and coords are not provided
+      // Auto-geocode if address is being updated and coords are not provided
+      if ((data.address || data.city || data.state || data.zipCode) && (!data.latitude && !data.longitude)) {
+        // Fetch current customer to merge address parts
+        const currentCustomer = await db.getCustomerById(id);
+
+        if (currentCustomer) {
+          const address = data.address ?? currentCustomer.address;
+          const city = data.city ?? currentCustomer.city;
+          const state = data.state ?? currentCustomer.state;
+          const zipCode = data.zipCode ?? currentCustomer.zipCode;
+
+          if (address || city || state || zipCode) {
+            const coords = await geocodeAddress(
+              address || undefined,
+              city || undefined,
+              state || undefined,
+              zipCode || undefined
+            );
+            if (coords) {
+              data.latitude = coords.lat.toString();
+              data.longitude = coords.lng.toString();
+            }
+          }
+        }
+      }
+
       await db.updateCustomer(id, data);
       return { success: true };
     }),

@@ -7,14 +7,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { Users, MapPin, Package, FileText, TrendingUp, Clock, Plus, ChevronRight, ArrowLeft, Zap } from "lucide-react";
+import { MapPin, Plus, ChevronRight, ArrowLeft, Zap } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { useRouteGpsTracking } from "@/_core/hooks/useRouteGpsTracking";
-
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Routes() {
+  const { user } = useAuth();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
 
@@ -88,11 +89,16 @@ export default function Routes() {
 
   // Show route details view if a route is selected
   if (selectedRouteId !== null && selectedRoute && routeWithStops) {
-    const isManager = true; // In a real app, check user role
+    const isManager = user?.role === "admin" || user?.role === "manager";
     const completedStops = routeWithStops.stops?.filter(s => {
       // In a real app, you'd track which stops have been visited
       return false;
     }).length || 0;
+
+    // Filter rep locations for non-managers
+    const visibleRepLocations = isManager
+      ? repLocations
+      : repLocations.filter(r => r.userId === user?.id);
 
     return (
       <DashboardLayout>
@@ -114,16 +120,14 @@ export default function Routes() {
             </div>
           </div>
 
-          {/* GPS Tracking for Managers */}
-          {isManager && (
-            <RouteMapTracking
-              routeId={selectedRouteId}
-              stops={routeWithStops.stops || []}
-              repLocations={repLocations}
-              isLoading={gpsLoading}
-              onSaveOptimizedOrder={handleSaveOptimizedOrder}
-            />
-          )}
+          {/* GPS Tracking & Optimization (Visible to all, but filtered for non-managers) */}
+          <RouteMapTracking
+            routeId={selectedRouteId}
+            stops={routeWithStops.stops || []}
+            repLocations={visibleRepLocations}
+            isLoading={gpsLoading}
+            onSaveOptimizedOrder={handleSaveOptimizedOrder}
+          />
 
           {/* Route Progress */}
           {routeWithStops.stops && routeWithStops.stops.length > 0 ? (
