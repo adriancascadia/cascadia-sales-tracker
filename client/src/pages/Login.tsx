@@ -14,6 +14,13 @@ import { APP_LOGO, APP_TITLE } from "@/const";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Users,
   MapPin,
   Package,
@@ -37,42 +44,41 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [name, setName] = useState("");
+  const [role, setRole] = useState<"user" | "admin">("user");
 
   const loginMutation = trpc.auth.login.useMutation();
   const registerMutation = trpc.auth.register.useMutation();
   const utils = trpc.useUtils();
 
   const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
+    e.preventDefault();
+    setIsLoading(true);
 
-  try {
-    const result = await loginMutation.mutateAsync({
-      email,
-      password,
-      companyId,
-    });
+    try {
+      const result = await loginMutation.mutateAsync({
+        email,
+        password,
+        companyId,
+      });
 
-    // Guardar el token en localStorage
-    if (result.token) {
-      localStorage.setItem("auth_token", result.token);
-      
-      // Invalida el cache de tRPC para que se refresque useAuth()
-      
-      await utils.auth.me.invalidate();
-    }
+      // Guardar el token en localStorage
+      if (result.token) {
+        localStorage.setItem("auth_token", result.token);
 
-    toast.success("Login successful!");
+        // Invalida el cache de tRPC para que se refresque useAuth()
 
-    // Redirige después de un pequeño delay
-    setTimeout(() => {
+        await utils.auth.me.invalidate();
+      }
+
+      toast.success("Login successful!");
+
+      // Redirige inmediatamente
       setLocation("/");
-    }, 500);
-  } catch (error: any) {
-    toast.error(error.message || "Login failed");
-    setIsLoading(false);
-  }
-};
+    } catch (error: any) {
+      toast.error(error.message || "Login failed");
+      setIsLoading(false);
+    }
+  };
 
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -80,13 +86,14 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      console.log("Registering with:", { name, email, password, companyId });
+      console.log("Registering with:", { name, email, password, companyId, role });
 
       const result = await registerMutation.mutateAsync({
         name,
         email,
         password,
         companyId,
+        role,
       });
 
       console.log("Registration result:", result);
@@ -95,6 +102,7 @@ export default function Login() {
       setEmail("");
       setPassword("");
       setName("");
+      setRole("user");
     } catch (error: any) {
       console.error("Registration error:", error);
       console.error("Error message:", error.message);
@@ -115,23 +123,23 @@ export default function Login() {
             {APP_LOGO && <img src={APP_LOGO} alt="Logo" className="h-12" />}
           </div>
           <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                <span>Real-time GPS tracking</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>Check-in/Check-out logging</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Package className="h-4 w-4" />
-                <span>Order management</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <FileText className="h-4 w-4" />
-                <span>Photo documentation</span>
-              </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4" />
+              <span>Real-time GPS tracking</span>
             </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Check-in/Check-out logging</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Package className="h-4 w-4" />
+              <span>Order management</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <FileText className="h-4 w-4" />
+              <span>Photo documentation</span>
+            </div>
+          </div>
           <CardTitle className="text-3xl font-bold">{APP_TITLE}</CardTitle>
           <CardDescription>
             {showRegister ? "Create a new account" : "Sign in to your account"}
@@ -176,6 +184,21 @@ export default function Login() {
                 required
               />
             </div>
+
+            {showRegister && (
+              <div>
+                <label className="text-sm font-medium">Role</label>
+                <Select value={role} onValueChange={(val: "user" | "admin") => setRole(val)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Salesperson</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (

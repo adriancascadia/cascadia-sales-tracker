@@ -39,10 +39,20 @@ export default function DashboardLayout({
   navItems = NAV_ITEMS,
 }: {
   children: React.ReactNode;
-  navItems?: Array<{ href: string; label: string; icon: any }>;
+  navItems?: typeof NAV_ITEMS;
 }) {
+  const { loading, user } = useAuth();
+
+  // Filter nav items based on user role
+  const filteredNavItems = (navItems || NAV_ITEMS).filter(item => {
+    if (!item.roles) return true;
+    if (!user) return false;
+    const userRole = (user as any).role || "user";
+    return item.roles.includes(userRole);
+  });
+
   // Convert navItems to menuItems format
-  const menuItems = navItems.map(item => ({
+  const menuItems = filteredNavItems.map(item => ({
     icon: item.icon,
     label: item.label,
     path: item.href,
@@ -51,7 +61,7 @@ export default function DashboardLayout({
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
-  const { loading, user } = useAuth();
+
   const [, setLocation] = useLocation();
 
   useEffect(() => {

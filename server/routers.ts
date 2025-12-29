@@ -789,6 +789,9 @@ const distributorsRouter = router({
       notes: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Only admins can manage distributors" });
+      }
       const id = await db.createDistributor({
         ...input,
         companyId: ctx.user.companyId,
@@ -810,7 +813,10 @@ const distributorsRouter = router({
       notes: z.string().optional(),
       isActive: z.number().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Only admins can manage distributors" });
+      }
       const { id, ...data } = input;
       await db.updateDistributor(id, data);
       return { success: true };
@@ -818,7 +824,10 @@ const distributorsRouter = router({
 
   delete: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Only admins can manage distributors" });
+      }
       await db.deleteDistributor(input.id);
       return { success: true };
     }),
@@ -883,6 +892,7 @@ export const appRouter = router({
         email: z.string().email(),
         password: z.string().min(6, "Password must be at least 6 characters"),
         companyId: z.number(),
+        role: z.enum(["user", "admin", "manager", "rep"]).default("user"),
       }))
       .mutation(async ({ input }) => {
         const existingUser = await db.getUserByEmail(input.email);
@@ -898,7 +908,7 @@ export const appRouter = router({
           name: input.name,
           email: input.email,
           password: input.password,
-          role: "user",
+          role: input.role,
         });
 
         return {
